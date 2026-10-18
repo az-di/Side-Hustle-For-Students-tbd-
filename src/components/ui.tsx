@@ -6,17 +6,25 @@ export function cx(...parts: (string | false | null | undefined)[]): string {
   return parts.filter(Boolean).join(" ");
 }
 
+export function Wordmark({ className }: { className?: string }) {
+  return (
+    <span className={cx("wordmark font-display text-lg font-bold tracking-tight text-ink", className)}>
+      HUSTL<span className="wordmark-tick text-brand">_</span>
+    </span>
+  );
+}
+
 // ──────────────────────────────── buttons ─────────────────────────────────
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
 const BUTTON_BASE =
-  "inline-flex items-center justify-center gap-2 rounded-full font-medium transition-colors " +
+  "inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors " +
   "disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand";
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-ink",
-  secondary: "bg-surface text-ink border border-line hover:border-ink-faint",
+  primary: "bg-brand text-brand-ink hover:bg-brand-ink hover:text-brand-soft",
+  secondary: "bg-surface text-ink border border-line hover:border-ink",
   ghost: "text-ink-soft hover:bg-brand-soft hover:text-brand-ink",
   danger: "bg-danger-soft text-danger border border-danger/20 hover:bg-danger hover:text-white",
 };
@@ -65,7 +73,7 @@ export function CardLink({ href, className, children }: { href: string; classNam
     <Link
       href={href}
       className={cx(
-        "block rounded-card border border-line bg-surface p-4 transition-colors hover:border-brand/40",
+        "block rounded-card border border-line bg-surface p-4 transition-colors hover:border-ink",
         className,
       )}
     >
@@ -86,7 +94,7 @@ export function PageHeader({
   return (
     <div className="mb-5 flex items-start justify-between gap-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-display text-2xl font-semibold tracking-tight">{title}</h1>
         {subtitle ? <p className="mt-1 text-sm text-ink-soft">{subtitle}</p> : null}
       </div>
       {action}
@@ -96,10 +104,10 @@ export function PageHeader({
 
 export function EmptyState({ title, body, action }: { title: string; body?: string; action?: ReactNode }) {
   return (
-    <div className="rounded-card border border-dashed border-line bg-surface px-5 py-10 text-center">
-      <p className="font-medium">{title}</p>
-      {body ? <p className="mx-auto mt-1 max-w-sm text-sm text-ink-soft">{body}</p> : null}
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    <div className="px-1 py-8">
+      <p className="font-display text-lg font-semibold">{title}</p>
+      {body ? <p className="mt-1 max-w-sm text-sm text-ink-soft">{body}</p> : null}
+      {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );
 }
@@ -107,8 +115,8 @@ export function EmptyState({ title, body, action }: { title: string; body?: stri
 // ──────────────────────────────── form bits ───────────────────────────────
 
 const FIELD =
-  "w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-ink-faint " +
-  "focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+  "w-full rounded-control border border-line bg-surface px-3 py-2.5 text-ink placeholder:text-ink-faint " +
+  "focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30";
 
 export function Input({ className, ...props }: ComponentProps<"input">) {
   return <input {...props} className={cx(FIELD, className)} />;
@@ -143,7 +151,7 @@ export function Field({
 export function FormError({ children }: { children?: ReactNode }) {
   if (!children) return null;
   return (
-    <p className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
+    <p className="rounded-control bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
       {children}
     </p>
   );
@@ -155,7 +163,7 @@ type BadgeTone = "neutral" | "brand" | "money" | "warn" | "danger";
 
 const BADGE_TONES: Record<BadgeTone, string> = {
   neutral: "bg-canvas text-ink-soft border-line",
-  brand: "bg-brand-soft text-brand-ink border-brand/20",
+  brand: "bg-brand-soft text-brand-ink border-brand/40",
   money: "bg-money-soft text-money border-money/20",
   warn: "bg-warn-soft text-warn border-warn/20",
   danger: "bg-danger-soft text-danger border-danger/20",
@@ -173,7 +181,7 @@ export function Badge({
   return (
     <span
       className={cx(
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-control border px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide",
         BADGE_TONES[tone],
         className,
       )}
@@ -181,6 +189,10 @@ export function Badge({
       {children}
     </span>
   );
+}
+
+export function Price({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cx("font-mono font-medium tracking-tight", className)}>{children}</span>;
 }
 
 /** Rating display. `count` of 0 renders "No reviews yet" rather than 0 stars. */
@@ -191,11 +203,11 @@ export function Stars({ rating, count }: { rating: number | null; count: number 
   const rounded = Math.round(rating);
   return (
     <span className="inline-flex items-center gap-1 text-sm">
-      <span aria-hidden className="text-warn">
+      <span aria-hidden className="text-brand">
         {"★".repeat(rounded)}
         <span className="text-line">{"★".repeat(5 - rounded)}</span>
       </span>
-      <span className="text-ink-soft">
+      <span className="font-mono text-ink-soft">
         {rating.toFixed(1)}
         <span className="text-ink-faint"> ({count})</span>
       </span>
@@ -214,8 +226,8 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
     .join("");
   return (
     <span
-      className="inline-flex shrink-0 items-center justify-center rounded-full bg-brand-soft font-semibold text-brand-ink"
-      style={{ width: size, height: size, fontSize: size * 0.4 }}
+      className="inline-flex shrink-0 items-center justify-center rounded-control bg-brand-soft font-display font-semibold text-brand-ink"
+      style={{ width: size, height: size, fontSize: size * 0.38 }}
       aria-hidden
     >
       {initials}
@@ -230,14 +242,18 @@ export function Avatar({ name, size = 40 }: { name: string; size?: number }) {
 export function PayoutLine({ label = "You'd receive", children }: { label?: string; children: ReactNode }) {
   return (
     <span className="inline-flex items-baseline gap-1.5">
-      <span className="text-xs uppercase tracking-wide text-ink-faint">{label}</span>
-      <span className="text-lg font-semibold text-money">{children}</span>
+      <span className="font-mono text-[10px] uppercase tracking-wide text-ink-faint">{label}</span>
+      <Price className="text-base text-brand-ink">{children}</Price>
     </span>
   );
 }
 
 export function TagChip({ name, kind }: { name: string; kind?: "SERVICE" | "COURSE" }) {
-  return <Badge tone={kind === "COURSE" ? "neutral" : "brand"}>{name}</Badge>;
+  return (
+    <Badge tone={kind === "COURSE" ? "neutral" : "brand"} className={kind === "COURSE" ? "normal-case" : ""}>
+      {name}
+    </Badge>
+  );
 }
 
 // RelativeTime and Countdown read the clock during render. They are server
@@ -256,7 +272,7 @@ export function RelativeTime({ date }: { date: Date }) {
           ? `${Math.round(mins / 60)}h ago`
           : `${Math.round(mins / (60 * 24))}d ago`;
   return (
-    <time dateTime={date.toISOString()} className="text-xs text-ink-faint">
+    <time dateTime={date.toISOString()} className="font-mono text-xs text-ink-faint">
       {label}
     </time>
   );

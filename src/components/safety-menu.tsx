@@ -27,7 +27,7 @@ export function SafetyMenu({
       ) : null}
       <form action={blockedByMe ? unblockUserAction : blockUserAction}>
         <input type="hidden" name="handle" value={handle} />
-        <button type="submit" className="rounded-full px-2 py-1 text-xs text-ink-soft hover:bg-danger-soft hover:text-danger">
+        <button type="submit" className="rounded-control px-2 py-1 text-xs text-ink-soft hover:bg-danger-soft hover:text-danger">
           {blockedByMe ? "Unblock" : "Block"}
         </button>
       </form>

@@ -23,7 +23,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           ["/admin/users", "Users"],
           ["/admin/audit", "Audit log"],
         ].map(([href, label]) => (
-          <Link key={href} href={href} className="rounded-full px-3 py-1 text-ink-soft hover:bg-brand-soft hover:text-brand-ink">
+          <Link key={href} href={href} className="rounded-control px-3 py-1 text-ink-soft hover:bg-brand-soft hover:text-brand-ink">
             {label}
           </Link>
         ))}

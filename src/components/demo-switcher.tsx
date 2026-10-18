@@ -23,7 +23,7 @@ export async function DemoSwitcher({ currentHandle }: { currentHandle: string })
 
   return (
     <details className="relative">
-      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-full border border-warn/30 bg-warn-soft px-2 py-1 text-xs font-medium text-warn">
+      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-control border border-warn/30 bg-warn-soft px-2 py-1 font-mono text-[11px] font-medium uppercase tracking-wide text-warn">
         switch
         <span aria-hidden>▾</span>
       </summary>

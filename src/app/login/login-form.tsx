@@ -29,12 +29,12 @@ export function LoginForm({ allowedDomain }: { allowedDomain: string }) {
             We sent a 6-digit code to <span className="font-medium">{requestState.email}</span>.
           </p>
           {requestState.emailDelivered === false ? (
-            <p className="mt-2 rounded-xl bg-warn-soft px-3 py-2 text-xs text-warn">
+            <p className="mt-2 rounded-control bg-warn-soft px-3 py-2 text-xs text-warn">
               Email is not configured in this environment, so nothing was actually delivered — use the code below.
             </p>
           ) : null}
           {requestState.demoCode && requestState.emailDelivered !== false ? (
-            <p className="mt-2 rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand-ink">
+            <p className="mt-2 rounded-control bg-brand-soft px-3 py-2 text-sm text-brand-ink">
               Demo mode code: <span className="font-mono text-base font-semibold">{requestState.demoCode}</span>
             </p>
           ) : null}

@@ -89,12 +89,12 @@ function IndicatorLink({
   return (
     <Link
       href={href}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full text-base hover:bg-brand-soft"
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-control text-base hover:bg-brand-soft"
       aria-label={count > 0 ? `${count} ${label}` : label}
     >
       <span aria-hidden>{icon}</span>
       {count > 0 ? (
-        <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold text-white">
+        <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-control bg-brand px-1 font-mono text-[10px] font-semibold text-brand-ink">
           {count > 99 ? "99+" : count}
         </span>
       ) : null}

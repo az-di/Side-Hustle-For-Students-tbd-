@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/auth";
-import { getTagBySlug, listSellersForTag, listServiceTags } from "@/modules/catalog/queries";
+import { getTagBySlug, listCourseTagsBySubject, listSellersForTag, listServiceTags } from "@/modules/catalog/queries";
 import { formatCents } from "@/lib/money";
 import { TagSearchBox } from "@/components/tag-search-box";
-import { Avatar, Badge, ButtonLink, Card, CardLink, EmptyState, PageHeader, Stars } from "@/components/ui";
+import { Avatar, Badge, ButtonLink, CardLink, EmptyState, PageHeader, Price, Stars } from "@/components/ui";
 
 export const metadata = { title: "Find someone · HUSTL" };
 
@@ -23,7 +23,9 @@ export default async function SearchPage({
         viewerId: viewer?.id ?? null,
       })
     : [];
-  const serviceTags = tag ? [] : await listServiceTags();
+  const [serviceTags, courseGroups] = tag
+    ? ([[], []] as [Awaited<ReturnType<typeof listServiceTags>>, Awaited<ReturnType<typeof listCourseTagsBySubject>>])
+    : await Promise.all([listServiceTags(), listCourseTagsBySubject()]);
 
   return (
     <main>
@@ -42,12 +44,12 @@ export default async function SearchPage({
 
       {tag ? (
         <>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-ink-soft">Minimum rating:</span>
+          <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">Minimum rating</span>
             {[
               { label: "Any", value: undefined },
-              { label: "4★+", value: "4" },
-              { label: "4.5★+", value: "4.5" },
+              { label: "4+", value: "4" },
+              { label: "4.5+", value: "4.5" },
             ].map((option) => {
               const active = (minRating ?? undefined) === option.value;
               const href = option.value ? `/search?tag=${tag.slug}&minRating=${option.value}` : `/search?tag=${tag.slug}`;
@@ -57,8 +59,8 @@ export default async function SearchPage({
                   href={href}
                   className={
                     active
-                      ? "rounded-full border border-brand bg-brand-soft px-2.5 py-1 text-xs font-medium text-brand-ink"
-                      : "rounded-full border border-line px-2.5 py-1 text-xs text-ink-soft hover:border-ink-faint"
+                      ? "font-mono text-sm font-medium text-brand-ink underline decoration-brand underline-offset-4"
+                      : "font-mono text-sm text-ink-soft hover:text-ink"
                   }
                 >
                   {option.label}
@@ -78,10 +80,10 @@ export default async function SearchPage({
               action={<ButtonLink href={`/requests/new?tag=${tag.slug}`}>Post a request</ButtonLink>}
             />
           ) : (
-            <ul className="space-y-3">
+            <ul className="divide-y divide-line border-y border-line">
               {sellers.map((seller) => (
                 <li key={seller.userId}>
-                  <CardLink href={`/sellers/${seller.handle}`}>
+                  <CardLink href={`/sellers/${seller.handle}`} className="rounded-none border-0 bg-transparent px-0">
                     <div className="flex items-start gap-3">
                       <Avatar name={seller.displayName} />
                       <div className="min-w-0 flex-1">
@@ -102,12 +104,15 @@ export default async function SearchPage({
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        {/* Seller-authored prices are stored net: shown exactly as typed. */}
                         {seller.fixedPriceCents ? (
-                          <p className="font-semibold">{formatCents(seller.fixedPriceCents)}</p>
+                          <p>
+                            <Price>{formatCents(seller.fixedPriceCents)}</Price>
+                          </p>
                         ) : null}
                         {seller.hourlyRateCents ? (
-                          <p className="text-xs text-ink-soft">{formatCents(seller.hourlyRateCents)}/hr</p>
+                          <p className="text-xs text-ink-soft">
+                            <Price className="text-xs">{formatCents(seller.hourlyRateCents)}/hr</Price>
+                          </p>
                         ) : null}
                       </div>
                     </div>
@@ -118,23 +123,38 @@ export default async function SearchPage({
           )}
         </>
       ) : (
-        <Card>
-          <p className="mb-3 text-sm font-medium">Browse by service</p>
-          <div className="flex flex-wrap gap-2">
-            {serviceTags.map((t) => (
-              <Link
-                key={t.id}
-                href={`/search?tag=${t.slug}`}
-                className="rounded-full border border-line bg-canvas px-3 py-1.5 text-sm hover:border-brand/40 hover:bg-brand-soft"
-              >
-                {t.name}
-              </Link>
-            ))}
-          </div>
-          <p className="mt-4 text-xs text-ink-soft">
-            Tutoring is organised by course code — type a code like “MATH 124” or “CSE 143” above.
-          </p>
-        </Card>
+        <div className="grid gap-8 sm:grid-cols-[1fr_1fr]">
+          <section>
+            <h2 className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">Skills</h2>
+            <ul className="mt-3 space-y-1.5">
+              {serviceTags.map((t) => (
+                <li key={t.id}>
+                  <Link href={`/search?tag=${t.slug}`} className="text-sm hover:underline">
+                    {t.name}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <section>
+            <h2 className="font-mono text-[11px] uppercase tracking-wider text-ink-faint">Tutoring</h2>
+            <div className="mt-3 space-y-4">
+              {courseGroups.slice(0, 8).map((group) => (
+                <div key={group.subject}>
+                  <p className="text-xs text-ink-faint">{group.subject}</p>
+                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                    {group.tags.slice(0, 8).map((t) => (
+                      <Link key={t.id} href={`/search?tag=${t.slug}`} className="font-mono text-sm hover:underline">
+                        {t.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-ink-soft">Type a course code above if you don&rsquo;t see it.</p>
+          </section>
+        </div>
       )}
     </main>
   );

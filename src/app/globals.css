@@ -1,15 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-ink: #16141f;
-  --color-ink-soft: #55506b;
-  --color-ink-faint: #8b86a0;
-  --color-line: #e7e4ef;
-  --color-surface: #ffffff;
-  --color-canvas: #faf9fc;
-  --color-brand: #5b2bd9;
-  --color-brand-soft: #f1ebfe;
-  --color-brand-ink: #3d1a99;
+  --color-ink: #1a1228;
+  --color-ink-soft: #5a4f6e;
+  --color-ink-faint: #8a7f9c;
+  --color-line: #d4cce0;
+  --color-surface: #fffaf6;
+  --color-canvas: #ece6f2;
+  --color-brand: #d4a017;
+  --color-brand-soft: #f7ecd0;
+  --color-brand-ink: #3d3208;
+  --color-verified: #4b2e83;
+  --color-cherry: #d9849a;
+  --color-dusk: #2f2158;
+  --color-brick: #9a4f42;
   --color-money: #0f7a52;
   --color-money-soft: #e6f6ef;
   --color-warn: #9a5b00;
@@ -17,28 +21,257 @@
   --color-danger: #b3261e;
   --color-danger-soft: #fdecea;
 
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-source), "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-syne), Syne, ui-sans-serif, sans-serif;
+  --font-mono: var(--font-plex), "IBM Plex Mono", ui-monospace, monospace;
 
-  --radius-card: 14px;
+  --radius-card: 8px;
+  --radius-control: 6px;
 }
 
 html {
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 body {
-  background: var(--color-canvas);
+  background:
+    radial-gradient(1200px 480px at 10% -10%, rgba(217, 132, 154, 0.22), transparent 55%),
+    radial-gradient(900px 520px at 100% 0%, rgba(75, 46, 131, 0.16), transparent 50%),
+    var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  /* Safe-area padding so the sticky bottom nav clears an iPhone home bar. */
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Inputs must be >=16px on iOS or Safari zooms the whole page on focus. */
+body::before {
+  content: "";
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  opacity: 0.07;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");
+}
+
+h1,
+h2,
+.font-display {
+  font-family: var(--font-display);
+}
+
 input,
 textarea,
 select {
   font-size: 16px;
+}
+
+.wordmark-tick {
+  display: inline-block;
+  transform-origin: left center;
+  animation: tick-draw 700ms 120ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes tick-draw {
+  from {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+}
+
+.landing-root {
+  margin-inline: calc(50% - 50vw);
+  margin-top: -1.25rem;
+  width: 100vw;
+}
+
+.landing-mural {
+  position: relative;
+  overflow-x: clip;
+  isolation: isolate;
+  min-height: calc(100dvh - 4.5rem);
+  background:
+    radial-gradient(ellipse 80% 60% at 80% 20%, rgba(217, 132, 154, 0.35), transparent 55%),
+    radial-gradient(ellipse 70% 80% at 0% 100%, rgba(154, 79, 66, 0.28), transparent 50%),
+    linear-gradient(165deg, #3a246e 0%, #4b2e83 38%, #2a1b4a 100%);
+  color: #f6efe4;
+}
+
+.landing-mural::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 18px,
+      rgba(154, 79, 66, 0.07) 18px 19px
+    );
+  mix-blend-mode: overlay;
+  opacity: 0.45;
+}
+
+.landing-copy {
+  animation: rise-in 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0.35;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.print {
+  position: relative;
+  padding: 1.35rem 1.1rem 1.1rem;
+  background: #fffaf6;
+  color: var(--color-ink);
+  box-shadow:
+    0 18px 40px rgba(20, 10, 40, 0.28),
+    0 0 0 1px rgba(255, 250, 246, 0.4);
+  animation: print-drop 900ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition:
+    transform 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 420ms ease;
+}
+
+.print-tape {
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 44px;
+  height: 13px;
+  transform: translateX(-50%) rotate(-9deg);
+  background: rgba(212, 160, 23, 0.55);
+  pointer-events: none;
+}
+
+.print-poster .print-tape,
+.print-beauty .print-tape {
+  background: rgba(75, 46, 131, 0.45);
+  transform: translateX(-50%) rotate(7deg);
+}
+
+.print-notes .print-tape {
+  background: rgba(217, 132, 154, 0.55);
+}
+
+.print-bake .print-tape {
+  background: rgba(154, 79, 66, 0.5);
+  transform: translateX(-50%) rotate(5deg);
+}
+
+.print:hover,
+.print:focus-visible {
+  z-index: 2;
+  transform: rotate(0deg) translateY(-10px) scale(1.03) !important;
+  box-shadow:
+    0 28px 50px rgba(20, 10, 40, 0.38),
+    0 0 0 1px rgba(212, 160, 23, 0.45);
+}
+
+@keyframes print-drop {
+  from {
+    opacity: 0.2;
+    transform: translateY(28px) rotate(8deg);
+  }
+  to {
+    opacity: 1;
+    transform: var(--print-rot);
+  }
+}
+
+.print-photo {
+  --print-rot: rotate(-6deg);
+  animation-delay: 180ms;
+}
+.print-poster,
+.print-beauty {
+  --print-rot: rotate(4.5deg);
+  animation-delay: 280ms;
+}
+.print-notes {
+  --print-rot: rotate(-3deg);
+  animation-delay: 380ms;
+}
+.print-bake {
+  --print-rot: rotate(6deg);
+  animation-delay: 480ms;
+}
+
+.petal {
+  position: absolute;
+  width: 10px;
+  height: 14px;
+  border-radius: 70% 10% 70% 10%;
+  background: #e8a0b4;
+  opacity: 0.55;
+  pointer-events: none;
+  animation: petal-fall linear infinite;
+}
+
+@keyframes petal-fall {
+  0% {
+    transform: translate3d(0, -10%, 0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(40px, 110vh, 0) rotate(220deg);
+    opacity: 0;
+  }
+}
+
+.gold-wash {
+  position: absolute;
+  inset: auto -10% -20% 40%;
+  height: 50%;
+  background: radial-gradient(closest-side, rgba(212, 160, 23, 0.28), transparent 70%);
+  animation: wash 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes wash {
+  from {
+    transform: translateX(-6%) scale(1);
+  }
+  to {
+    transform: translateX(8%) scale(1.08);
+  }
+}
+
+body:has(.landing-mural) {
+  background: #2a1b4a;
+}
+
+body:has(.landing-mural) .site-header {
+  border-bottom-color: rgba(246, 239, 228, 0.12);
+  background: color-mix(in srgb, #2f2158 72%, transparent);
+}
+
+body:has(.landing-mural) .wordmark {
+  color: #f6efe4;
+}
+
+body:has(.landing-mural) .site-footer {
+  color: rgba(246, 239, 228, 0.55);
+}
+
+body:has(.landing-mural) .site-footer a:hover {
+  color: #f6efe4;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -46,6 +279,15 @@ select {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .print,
+  .print-photo,
+  .print-poster,
+  .print-notes,
+  .print-bake {
+    transform: none;
   }
 }

@@ -149,12 +149,46 @@ export const SERVICE_TAGS: SeedTag[] = [
     searchTerms: ["baking", "baker", "cake", "birthday cake", "cupcakes", "cookies", "pastries", "custom cake"],
     sortOrder: 150,
   },
+  {
+    slug: "nails",
+    name: "Nails",
+    kind: "SERVICE",
+    searchTerms: [
+      "nails",
+      "nail tech",
+      "manicure",
+      "pedicure",
+      "gel nails",
+      "acrylics",
+      "nail set",
+      "press ons",
+      "nail art",
+    ],
+    sortOrder: 160,
+  },
+  {
+    slug: "hair",
+    name: "Hair",
+    kind: "SERVICE",
+    searchTerms: [
+      "hair",
+      "haircut",
+      "blowout",
+      "braids",
+      "styling",
+      "silk press",
+      "trim",
+      "blow dry",
+      "hairstylist",
+    ],
+    sortOrder: 170,
+  },
 ];
 
 /**
  * A curated set of the courses students actually hire tutors for, rather than
- * the whole UW catalog — thousands of zero-seller tags would drown the 15 real
- * service tags in every search result. Grouped by subject; the seller tag
+ * the whole UW catalog — thousands of zero-seller tags would drown the service
+ * tags in every search result. Grouped by subject; the seller tag
  * editor offers "add all MATH" style bulk selection over these groups.
  *
  * `course()` builds the standard search terms ("math 124", "math124") and

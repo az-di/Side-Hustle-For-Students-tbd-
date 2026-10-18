@@ -14,6 +14,7 @@ import {
   ButtonLink,
   Card,
   EmptyState,
+  Price,
   RelativeTime,
   Stars,
   TagChip,
@@ -39,7 +40,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         <div className="mb-5 flex items-start gap-4">
           <Avatar name={seller.displayName} size={64} />
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">{seller.displayName}</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">{seller.displayName}</h1>
             <p className="text-sm text-ink-soft">@{seller.handle}</p>
           </div>
         </div>
@@ -66,7 +67,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         <Avatar name={seller.displayName} size={64} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-semibold tracking-tight">{seller.displayName}</h1>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">{seller.displayName}</h1>
             {profile && !profile.isAvailable ? <Badge tone="neutral">Paused</Badge> : null}
           </div>
           <p className="text-sm text-ink-soft">@{seller.handle}</p>
@@ -103,7 +104,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         </div>
       ) : null}
 
-      {profile?.headline ? <p className="mb-2 font-medium">{profile.headline}</p> : null}
+      {profile?.headline ? <p className="mb-2 font-display text-xl font-semibold">{profile.headline}</p> : null}
       {profile?.about ? <p className="mb-5 whitespace-pre-wrap text-sm text-ink-soft">{profile.about}</p> : null}
       {!profile && seller.bio ? <p className="mb-5 text-sm text-ink-soft">{seller.bio}</p> : null}
 
@@ -114,9 +115,31 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
         />
       ) : (
         <>
+          {(profile.fixedPriceCents || profile.hourlyRateCents) ? (
+            <p className="mb-6 font-mono text-sm text-ink">
+              {/*
+                Seller-authored prices are stored NET, so they render exactly as
+                the seller typed them — never grossed up on their own profile.
+              */}
+              Typical{" "}
+              <Price className="text-lg text-brand-ink">
+                {profile.fixedPriceCents ? formatCents(profile.fixedPriceCents) : null}
+                {profile.fixedPriceCents && profile.hourlyRateCents ? " · " : null}
+                {profile.hourlyRateCents ? `${formatCents(profile.hourlyRateCents)}/hr` : null}
+              </Price>
+            </p>
+          ) : null}
+
+          {portfolio.length > 0 ? (
+            <section className="mb-6">
+              <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-faint">Work</h2>
+              <PortfolioGrid items={portfolio} />
+            </section>
+          ) : null}
+
           {seller.tags.length > 0 ? (
             <section className="mb-6">
-              <h2 className="mb-2 text-sm font-semibold">Open to</h2>
+              <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-faint">Open to</h2>
               <div className="flex flex-wrap gap-2">
                 {seller.tags.map((tag) => (
                   <Link key={tag.id} href={`/search?tag=${tag.slug}`}>
@@ -127,24 +150,9 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
             </section>
           ) : null}
 
-          {(profile.fixedPriceCents || profile.hourlyRateCents) ? (
-            <Card className="mb-6">
-              <p className="text-xs uppercase tracking-wide text-ink-faint">Typical rate</p>
-              {/*
-                Seller-authored prices are stored NET, so they render exactly as
-                the seller typed them — never grossed up on their own profile.
-              */}
-              <p className="mt-0.5 text-lg font-semibold">
-                {profile.fixedPriceCents ? formatCents(profile.fixedPriceCents) : null}
-                {profile.fixedPriceCents && profile.hourlyRateCents ? " · " : null}
-                {profile.hourlyRateCents ? `${formatCents(profile.hourlyRateCents)}/hr` : null}
-              </p>
-            </Card>
-          ) : null}
-
           {seller.listings.length > 0 ? (
             <section className="mb-6">
-              <h2 className="mb-2 text-sm font-semibold">Services</h2>
+              <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-faint">Services</h2>
               <ul className="space-y-3">
                 {seller.listings.map((listing) => (
                   <li key={listing.id}>
@@ -188,16 +196,9 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
             </section>
           ) : null}
 
-          {portfolio.length > 0 ? (
-            <section className="mb-6">
-              <h2 className="mb-2 text-sm font-semibold">Work</h2>
-              <PortfolioGrid items={portfolio} />
-            </section>
-          ) : null}
-
           {profile.portfolioLinks.length > 0 ? (
             <section className="mb-6">
-              <h2 className="mb-2 text-sm font-semibold">{portfolio.length > 0 ? "More" : "Portfolio"}</h2>
+              <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-faint">{portfolio.length > 0 ? "More" : "Portfolio"}</h2>
               <ul className="space-y-1.5">
                 {profile.portfolioLinks.map((link) => (
                   <li key={link}>
@@ -216,7 +217,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
           ) : null}
 
           <section>
-            <h2 className="mb-2 text-sm font-semibold">
+            <h2 className="mb-2 font-mono text-[11px] uppercase tracking-wider text-ink-faint">
               Reviews {profile.ratingCount > 0 ? `(${profile.ratingCount})` : ""}
             </h2>
             {seller.reviews.length === 0 ? (

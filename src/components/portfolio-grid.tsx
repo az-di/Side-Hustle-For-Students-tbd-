@@ -17,7 +17,7 @@ export function PortfolioGrid({
   return (
     <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       {items.map((item) => (
-        <li key={item.id} className="overflow-hidden rounded-card border border-line bg-surface">
+        <li key={item.id} className="overflow-hidden border border-ink bg-surface">
           <a href={item.url} target="_blank" rel="noopener noreferrer" className="block aspect-square bg-canvas">
             {item.kind === "IMAGE" ? (
               // Plain <img>: the files are served by this app, not an image CDN.

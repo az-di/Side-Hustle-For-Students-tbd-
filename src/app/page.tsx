@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getViewer } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
-import { listServiceTags } from "@/modules/catalog/queries";
 import { listJobsForUser } from "@/modules/jobs/queries";
 import {
   listBuyerRequests,
@@ -11,14 +10,15 @@ import {
 import { REQUEST_STATUS_LABELS } from "@/modules/requests/state";
 import { JOB_STATUS_LABELS } from "@/modules/jobs/state";
 import { TagSearchBox } from "@/components/tag-search-box";
+import { LandingStudio } from "@/components/landing-studio";
 import {
   Badge,
   ButtonLink,
-  Card,
   CardLink,
   Countdown,
   EmptyState,
   PayoutLine,
+  Price,
 } from "@/components/ui";
 
 export default async function HomePage() {
@@ -32,20 +32,28 @@ export default async function HomePage() {
     listJobsForUser(viewer.id),
   ]);
 
-  const activeJobs = jobs.filter((j) => j.status === "IN_PROGRESS" || j.status === "AWAITING_CONFIRMATION");
   const toReview = jobs.filter((j) => j.needsReview);
+  const activeJobs = jobs.filter((j) => j.status === "IN_PROGRESS" || j.status === "AWAITING_CONFIRMATION");
   const liveRequests = myRequests.filter(
     (r) => r.effectiveStatus === "OPEN" || r.effectiveStatus === "PENDING_SELLER",
   );
 
+  const nextReview = toReview[0];
+  const nextIncoming = !nextReview ? incoming[0] : undefined;
+  const nextJob = !nextReview && !nextIncoming ? activeJobs[0] : undefined;
+  const restIncoming = nextIncoming ? incoming.filter((r) => r.id !== nextIncoming.id) : incoming;
+  const restJobs = nextJob ? activeJobs.filter((j) => j.id !== nextJob.id) : activeJobs;
+  const restReview = nextReview ? toReview.filter((j) => j.id !== nextReview.id) : toReview;
+
   return (
     <main className="space-y-8">
-      <section>
-        <h1 className="text-xl font-semibold tracking-tight">Hi {viewer.displayName.split(" ")[0]}</h1>
-        <div className="mt-3">
-          <TagSearchBox />
+      <section className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl font-semibold tracking-tight">
+            Hi {viewer.displayName.split(" ")[0]}
+          </h1>
         </div>
-        <div className="mt-3 flex gap-2">
+        <div className="flex gap-2">
           <ButtonLink href="/requests/new" size="sm">
             Post a request
           </ButtonLink>
@@ -55,17 +63,76 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {toReview.length > 0 ? (
+      <TagSearchBox />
+
+      {nextReview ? (
         <section>
-          <h2 className="mb-2 text-sm font-semibold">Leave a review</h2>
-          <ul className="space-y-2">
-            {toReview.map((job) => (
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">Needs a review</h2>
+          <CardLink href={`/jobs/${nextReview.id}`} className="border-warn/40 bg-warn-soft">
+            <p className="font-display text-lg font-semibold">{nextReview.title}</p>
+            <p className="mt-1 text-sm text-ink-soft">
+              Completed with {nextReview.counterparty.displayName} — leave a review.
+            </p>
+          </CardLink>
+        </section>
+      ) : nextIncoming ? (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">Asked of you</h2>
+          <CardLink href={`/requests/${nextIncoming.id}`} className="border-brand/50">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-display text-lg font-semibold">{nextIncoming.title}</p>
+                <p className="text-sm text-ink-soft">Asked of you by {nextIncoming.buyer.displayName}</p>
+              </div>
+              <Countdown to={new Date(nextIncoming.expiresAt)} />
+            </div>
+            <div className="mt-2">
+              <PayoutLine>
+                {nextIncoming.payoutFixedCents
+                  ? formatCents(nextIncoming.payoutFixedCents)
+                  : nextIncoming.payoutHourlyCents
+                    ? `${formatCents(nextIncoming.payoutHourlyCents)}/hr`
+                    : "—"}
+              </PayoutLine>
+            </div>
+          </CardLink>
+        </section>
+      ) : nextJob ? (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">In progress</h2>
+          <CardLink href={`/jobs/${nextJob.id}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-display text-lg font-semibold">{nextJob.title}</p>
+                <p className="text-sm text-ink-soft">
+                  {nextJob.role === "SELLER" ? "for" : "with"} {nextJob.counterparty.displayName}
+                </p>
+              </div>
+              <div className="shrink-0 text-right">
+                <Badge tone={nextJob.status === "AWAITING_CONFIRMATION" ? "warn" : "brand"}>
+                  {JOB_STATUS_LABELS[nextJob.status]}
+                </Badge>
+                <p className="mt-1">
+                  <Price>
+                    {nextJob.amountCents ? formatCents(nextJob.amountCents) : "—"}
+                    {nextJob.isHourly ? "/hr" : ""}
+                  </Price>
+                </p>
+              </div>
+            </div>
+          </CardLink>
+        </section>
+      ) : null}
+
+      {restReview.length > 0 ? (
+        <section>
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">Leave a review</h2>
+          <ul className="divide-y divide-line border-y border-line">
+            {restReview.map((job) => (
               <li key={job.id}>
-                <CardLink href={`/jobs/${job.id}`} className="border-warn/30 bg-warn-soft">
+                <CardLink href={`/jobs/${job.id}`} className="rounded-none border-0 bg-transparent px-0">
                   <p className="text-sm font-medium">{job.title}</p>
-                  <p className="text-xs text-ink-soft">
-                    Completed with {job.counterparty.displayName} — tell people how it went.
-                  </p>
+                  <p className="text-xs text-ink-soft">Completed with {job.counterparty.displayName}</p>
                 </CardLink>
               </li>
             ))}
@@ -73,13 +140,13 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {incoming.length > 0 ? (
+      {restIncoming.length > 0 ? (
         <section>
-          <h2 className="mb-2 text-sm font-semibold">Asked of you directly</h2>
-          <ul className="space-y-2">
-            {incoming.map((request) => (
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">Asked of you directly</h2>
+          <ul className="divide-y divide-line border-y border-line">
+            {restIncoming.map((request) => (
               <li key={request.id}>
-                <CardLink href={`/requests/${request.id}`} className="border-brand/30">
+                <CardLink href={`/requests/${request.id}`} className="rounded-none border-0 bg-transparent px-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{request.title}</p>
@@ -88,7 +155,6 @@ export default async function HomePage() {
                     <Countdown to={new Date(request.expiresAt)} />
                   </div>
                   <div className="mt-2">
-                    {/* Seller surface: payout only. */}
                     <PayoutLine>
                       {request.payoutFixedCents
                         ? formatCents(request.payoutFixedCents)
@@ -104,13 +170,13 @@ export default async function HomePage() {
         </section>
       ) : null}
 
-      {activeJobs.length > 0 ? (
+      {restJobs.length > 0 ? (
         <section>
-          <h2 className="mb-2 text-sm font-semibold">Active jobs</h2>
-          <ul className="space-y-2">
-            {activeJobs.map((job) => (
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">Active jobs</h2>
+          <ul className="divide-y divide-line border-y border-line">
+            {restJobs.map((job) => (
               <li key={job.id}>
-                <CardLink href={`/jobs/${job.id}`}>
+                <CardLink href={`/jobs/${job.id}`} className="rounded-none border-0 bg-transparent px-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{job.title}</p>
@@ -122,9 +188,11 @@ export default async function HomePage() {
                       <Badge tone={job.status === "AWAITING_CONFIRMATION" ? "warn" : "brand"}>
                         {JOB_STATUS_LABELS[job.status]}
                       </Badge>
-                      <p className="mt-1 text-sm font-semibold text-money">
-                        {job.amountCents ? formatCents(job.amountCents) : "—"}
-                        {job.isHourly ? "/hr" : ""}
+                      <p className="mt-1">
+                        <Price className="text-sm">
+                          {job.amountCents ? formatCents(job.amountCents) : "—"}
+                          {job.isHourly ? "/hr" : ""}
+                        </Price>
                       </p>
                     </div>
                   </div>
@@ -138,7 +206,7 @@ export default async function HomePage() {
       {viewer.isSeller ? (
         <section>
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Open requests in your tags</h2>
+            <h2 className="text-sm font-medium text-ink-soft">Open in your tags</h2>
             <Link href="/settings/seller" className="text-xs text-ink-faint underline hover:text-ink-soft">
               Manage tags
             </Link>
@@ -149,16 +217,15 @@ export default async function HomePage() {
               body="When a student posts a request with one of your tags, it shows up here and you get a notification."
             />
           ) : (
-            <ul className="space-y-2">
+            <ul className="divide-y divide-line border-y border-line">
               {feed.map((request) => (
                 <li key={request.id}>
-                  <CardLink href={`/requests/${request.id}`}>
+                  <CardLink href={`/requests/${request.id}`} className="rounded-none border-0 bg-transparent px-0">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{request.title}</p>
-                        <p className="text-xs text-ink-soft">
-                          {request.buyer.displayName} ·{" "}
-                          {request.tags.map((t) => t.name).join(", ")}
+                        <p className="truncate font-medium">{request.title}</p>
+                        <p className="font-mono text-xs text-ink-soft">
+                          {request.buyer.displayName} · {request.tags.map((t) => t.name).join(" · ")}
                         </p>
                       </div>
                       <Countdown to={new Date(request.expiresAt)} />
@@ -180,32 +247,27 @@ export default async function HomePage() {
           )}
         </section>
       ) : (
-        <section>
-          <Card className="border-brand/30 bg-brand-soft">
-            <p className="text-sm font-medium text-brand-ink">Have a skill?</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Set up a seller profile and students can hire you for photos, design, video, music or tutoring.
-            </p>
-            <ButtonLink href="/settings/seller" size="sm" className="mt-3">
-              Start selling
-            </ButtonLink>
-          </Card>
-        </section>
+        <p className="text-sm text-ink-soft">
+          Have a skill?{" "}
+          <Link href="/settings/seller" className="underline hover:text-ink">
+            Start selling
+          </Link>
+        </p>
       )}
 
       {liveRequests.length > 0 ? (
         <section>
-          <h2 className="mb-2 text-sm font-semibold">Your open requests</h2>
-          <ul className="space-y-2">
+          <h2 className="mb-2 text-sm font-medium text-ink-soft">Your open requests</h2>
+          <ul className="divide-y divide-line border-y border-line">
             {liveRequests.map((request) => (
               <li key={request.id}>
-                <CardLink href={`/requests/${request.id}`}>
+                <CardLink href={`/requests/${request.id}`} className="rounded-none border-0 bg-transparent px-0">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{request.title}</p>
                       <p className="text-xs text-ink-soft">
-                        {REQUEST_STATUS_LABELS[request.effectiveStatus]} ·{" "}
-                        {request.responseCount} response{request.responseCount === 1 ? "" : "s"}
+                        {REQUEST_STATUS_LABELS[request.effectiveStatus]} · {request.responseCount} response
+                        {request.responseCount === 1 ? "" : "s"}
                       </p>
                     </div>
                     <Countdown to={new Date(request.expiresAt)} />
@@ -220,54 +282,10 @@ export default async function HomePage() {
   );
 }
 
-async function Landing() {
-  const tags = await listServiceTags();
-
+function Landing() {
   return (
     <main>
-      <section className="py-6 text-center">
-        <h1 className="text-2xl font-bold tracking-tight">
-          Hire other UW students
-          <br />
-          <span className="text-brand">for creative work</span>
-        </h1>
-        <p className="mx-auto mt-3 max-w-md text-sm text-ink-soft">
-          Photos, posters, video, music, tutoring. Cheaper than Fiverr, and it&rsquo;s someone you can actually
-          meet on campus. UW email required on both sides.
-        </p>
-        <div className="mt-5 flex justify-center gap-2">
-          <ButtonLink href="/login" size="lg">
-            Sign in with UW email
-          </ButtonLink>
-        </div>
-      </section>
-
-      <Card className="mt-4">
-        <p className="mb-3 text-sm font-medium">What students hire each other for</p>
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag) => (
-            <span key={tag.id} className="rounded-full border border-line bg-canvas px-3 py-1.5 text-sm">
-              {tag.name}
-            </span>
-          ))}
-        </div>
-        <p className="mt-4 text-xs text-ink-soft">
-          Plus tutoring by course code — MATH 124, CSE 143, CHEM 142 and more.
-        </p>
-      </Card>
-
-      <section className="mt-6 grid gap-3 sm:grid-cols-3">
-        {[
-          { title: "Verified students only", body: "Everyone signs in with a @uw.edu address. No strangers." },
-          { title: "Reviews that mean something", body: "You can only review a job you actually completed." },
-          { title: "No 20% platform fee", body: "You pay your seller directly. HUSTL's cut is waived in beta." },
-        ].map((item) => (
-          <Card key={item.title}>
-            <p className="text-sm font-medium">{item.title}</p>
-            <p className="mt-1 text-xs text-ink-soft">{item.body}</p>
-          </Card>
-        ))}
-      </section>
+      <LandingStudio />
     </main>
   );
 }

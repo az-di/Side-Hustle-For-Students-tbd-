@@ -12,15 +12,22 @@ export const metadata = { title: "Sign in · HUSTL" };
 export default async function LoginPage() {
   if (await getViewer()) redirect("/");
 
-  const personas = isDemoMode ? await listDemoPersonas(12) : [];
+  let personas: Awaited<ReturnType<typeof listDemoPersonas>> = [];
+  if (isDemoMode) {
+    try {
+      personas = await listDemoPersonas(12);
+    } catch {
+      personas = [];
+    }
+  }
 
   return (
-    <main className="mx-auto w-full max-w-md px-4 py-10">
-      <div className="mb-8 text-center">
-        <p className="text-2xl font-bold tracking-tight text-brand">HUSTL</p>
-        <h1 className="mt-4 text-xl font-semibold">Hire other UW students</h1>
+    <main className="mx-auto w-full max-w-md py-6 sm:py-10">
+      <div className="mb-8">
+        <p className="text-sm text-verified">UW email required</p>
+        <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight">Sign in</h1>
         <p className="mt-2 text-sm text-ink-soft">
-          Photography, design, video, tutoring and more — from students on your campus.
+          Same address you use for Canvas. We check that it ends in @uw.edu.
         </p>
       </div>
 
