@@ -1,12 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireViewer } from "@/lib/auth";
 import { toUserMessage } from "@/lib/errors";
 import { getUserIdByHandle } from "@/modules/identity/queries";
-import { blockUser, reportUser, resolveReport, setUserStatus, unblockUser } from "@/modules/trust/mutations";
+import { blockUser, reportUser, unblockUser } from "@/modules/trust/mutations";
 import type { ActionState } from "./marketplace.actions";
 
 /**
@@ -78,23 +77,4 @@ export async function reportUserAction(_prev: ActionState | undefined, formData:
   return { ok: true };
 }
 
-// ────────────────────────────────── admin ─────────────────────────────────
-
-export async function resolveReportAction(formData: FormData): Promise<void> {
-  const viewer = await requireViewer();
-  const reportId = String(formData.get("reportId") ?? "");
-  const outcome = String(formData.get("outcome")) === "UPHELD" ? "UPHELD" : "DISMISSED";
-
-  await resolveReport({ adminUserId: viewer.id, reportId, outcome });
-  revalidatePath("/admin/reports");
-}
-
-export async function setUserStatusAction(formData: FormData): Promise<void> {
-  const viewer = await requireViewer();
-  const userId = String(formData.get("userId") ?? "");
-  const status = z.enum(["ACTIVE", "SUSPENDED", "CLOSED"]).parse(formData.get("status"));
-
-  await setUserStatus({ adminUserId: viewer.id, userId, status });
-  revalidatePath("/admin/reports");
-  redirect("/admin/reports");
-}
+// Admin actions (resolve, status) live in admin.actions.ts.

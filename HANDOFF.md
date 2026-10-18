@@ -66,7 +66,7 @@ http://localhost:3000. Click **switch** in the header to jump between seeded per
 | `npm run build` | Production build (runs `prisma generate` first) |
 | `npm run db:seed` | Idempotent seed — safe to re-run |
 | `npm run db:reset` | Drop → migrate → seed |
-| `npm run db:studio` | Prisma Studio — **this is the admin console for now** |
+| `npm run db:studio` | Prisma Studio — escape hatch; the admin console is `/admin` |
 
 ### Versions, pinned deliberately
 
@@ -83,7 +83,7 @@ Against the spec's 14 in-scope items:
 | # | Spec item | Status |
 | --- | --- | --- |
 | 1 | Sign-up restricted to verified UW email | ✅ Email OTP; enforced in app code **and** as a DB CHECK constraint |
-| 2 | Task tags, flat list, hidden synonyms, found by search | ✅ 15 service tags + 20 course codes, each with a hidden synonym list. ⚠️ Not the full UW catalog; tags are edited in the seed file, not a UI |
+| 2 | Task tags, flat list, hidden synonyms, found by search | ✅ 15 service tags + 20 course codes, each with a hidden synonym list, editable at `/admin/tags`. ⚠️ Not the full UW catalog |
 | 3 | Seller profile: bio, tags, portfolio, reviews, job history | ✅ All of it, including hosted photos/video/PDF (`MEDIA_DIR` volume) plus links |
 | 4 | Seller tags and listings | ✅ Listings with flat and/or hourly pricing, turnaround, tags |
 | 5 | Pause | ✅ Stays listed with a Paused badge, excluded from fan-out and direct requests |
@@ -448,9 +448,18 @@ A buyer may open **one** rate-limited thread per seller before requesting. `Thre
 
 </details>
 
-### 8. Admin console
+### 8. Admin console — DONE
+
+**Built — see `src/modules/admin/` and `src/app/admin/`.** Tag CRUD with synonym editing (one transaction), the report
+queue, user suspension / closure / admin toggling, the suspend threshold, and `AdminAuditLog` behind `withAudit()`,
+whose required audit argument is what makes an unlogged admin action a type error. Make someone an admin from
+`/admin/users` (or `isAdmin` in Prisma Studio for the very first one — the seeded Alex Kim already is).
+
+<details><summary>Original plan (kept for reference)</summary>
 
 Prisma Studio covers it for now. When it does not: tag CRUD with synonym editing (regenerating `searchTerms` in one transaction), a report queue, user suspension, and an `AdminAuditLog` where the repository method *requires* an audit payload argument, so an unlogged admin action does not typecheck.
+
+</details>
 
 ### 9. Full UW course catalog
 

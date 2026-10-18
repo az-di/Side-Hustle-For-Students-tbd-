@@ -6,7 +6,8 @@ import { listThreadsForUser } from "@/modules/messaging/queries";
 import { createDirectRequest, createOpenRequest, respondToOpenRequest } from "@/modules/requests/mutations";
 import { getRequestForViewer, listIncomingDirectRequests, listOpenRequestsForSeller } from "@/modules/requests/queries";
 import { cleanup, makeTag, makeUser } from "@/test/factories";
-import { blockUser, reportUser, resolveReport, unblockUser } from "./mutations";
+import { resolveReport } from "@/modules/admin/mutations";
+import { blockUser, reportUser, unblockUser } from "./mutations";
 
 /**
  * Blocking is enforced in two different places — point actions and feeds —
@@ -194,7 +195,7 @@ describe("reports and auto-suspension", () => {
     expect(results.map((s) => s.userId)).not.toContain(subject.id);
 
     // Dismissing the heavy report drops the weight to 1 and auto-reinstates.
-    await resolveReport({ adminUserId: admin.id, reportId, outcome: "DISMISSED" });
+    await resolveReport(admin.id, reportId, "DISMISSED");
     user = await db.user.findUniqueOrThrow({ where: { id: subject.id }, select: { status: true } });
     expect(user.status).toBe("ACTIVE");
   });
@@ -207,8 +208,6 @@ describe("reports and auto-suspension", () => {
 
   it("only admins can resolve", async () => {
     const report = await db.report.findFirstOrThrow({ where: { subjectUserId: subject.id, status: "OPEN" } });
-    await expect(
-      resolveReport({ adminUserId: reporterA.id, reportId: report.id, outcome: "UPHELD" }),
-    ).rejects.toMatchObject({ code: "NOT_ALLOWED" });
+    await expect(resolveReport(reporterA.id, report.id, "UPHELD")).rejects.toMatchObject({ code: "NOT_ALLOWED" });
   });
 });

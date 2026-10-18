@@ -48,6 +48,7 @@ model User {
   mediaAssets    MediaAsset[]
   portfolioItems PortfolioItem[]
   tagInterests   BuyerTagInterest[]
+  adminActions   AdminAuditLog[]
   trust          UserTrust?
   blocksMade     Block[]  @relation("BlocksMade")
   blocksReceived Block[]  @relation("BlocksReceived")
@@ -540,6 +541,24 @@ model PlatformSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+/// Every admin write goes through modules/admin/audit.ts#withAudit, whose
+/// signature requires this row's content — an unlogged admin action does
+/// not typecheck. Rows are never updated or deleted.
+model AdminAuditLog {
+  id          String   @id @default(cuid())
+  adminUserId String
+  action      String // e.g. "report.resolve", "user.status", "tag.update"
+  targetType  String // "report" | "user" | "tag" | "setting"
+  targetId    String
+  payload     Json // what changed, ids and values; never money
+  createdAt   DateTime @default(now())
+
+  admin User @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([targetType, targetId])
 }
 
 // ────────────────────────────────── media ─────────────────────────────────

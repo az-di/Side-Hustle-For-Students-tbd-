@@ -89,8 +89,8 @@ export function AppShell({ viewer, children }: { viewer: Viewer | null; children
           {viewer.isAdmin ? (
             <>
               {" · "}
-              <Link href="/admin/reports" className="underline hover:text-ink-soft">
-                Admin: report queue
+              <Link href="/admin" className="underline hover:text-ink-soft">
+                Admin
               </Link>
             </>
           ) : null}

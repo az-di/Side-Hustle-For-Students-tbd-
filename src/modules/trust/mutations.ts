@@ -167,55 +167,5 @@ export async function recomputeTrust(tx: Tx, userId: string): Promise<void> {
   }
 }
 
-// ────────────────────────────────── admin ─────────────────────────────────
-
-async function requireAdmin(userId: string): Promise<void> {
-  const admin = await db.user.findUnique({ where: { id: userId }, select: { isAdmin: true } });
-  if (!admin?.isAdmin) throw notAllowed("Admins only.");
-}
-
-export async function resolveReport(params: {
-  adminUserId: string;
-  reportId: string;
-  outcome: "UPHELD" | "DISMISSED";
-}): Promise<void> {
-  await requireAdmin(params.adminUserId);
-
-  const report = await db.report.findUnique({
-    where: { id: params.reportId },
-    select: { subjectUserId: true, status: true },
-  });
-  if (!report) throw notFound("That report");
-
-  await db.$transaction(async (tx) => {
-    const updated = await tx.report.updateMany({
-      where: { id: params.reportId, status: "OPEN" },
-      data: { status: params.outcome, resolvedById: params.adminUserId, resolvedAt: new Date() },
-    });
-    if (updated.count === 0) throw conflict("That report was already resolved.");
-    await recomputeTrust(tx, report.subjectUserId);
-  });
-}
-
-/** Admin override of an account's status. CLOSED signs the person out everywhere. */
-export async function setUserStatus(params: {
-  adminUserId: string;
-  userId: string;
-  status: "ACTIVE" | "SUSPENDED" | "CLOSED";
-}): Promise<void> {
-  await requireAdmin(params.adminUserId);
-  if (params.adminUserId === params.userId) throw invalid("You cannot change your own status.");
-
-  await db.$transaction(async (tx) => {
-    await tx.user.update({ where: { id: params.userId }, data: { status: params.status } });
-    // A hand-set status is never auto-reverted: clear the auto marker.
-    await tx.userTrust.upsert({
-      where: { userId: params.userId },
-      create: { userId: params.userId, autoSuspendedAt: null },
-      update: { autoSuspendedAt: null },
-    });
-    if (params.status === "CLOSED") {
-      await tx.session.deleteMany({ where: { userId: params.userId } });
-    }
-  });
-}
+// Admin actions on reports and accounts live in modules/admin/mutations.ts,
+// behind withAudit, so every one of them is logged.

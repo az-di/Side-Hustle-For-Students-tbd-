@@ -2,6 +2,24 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Admin console with an audit log [§11.8]
+
+**What an admin sees** (`User.isAdmin`; non-admins get a 404)
+
+- `/admin` — overview tiles (accounts, open reports, active tags, pending emails) and the **auto-suspend threshold** form, which was previously only editable in Prisma Studio.
+- `/admin/reports` — the queue from §11.1, unchanged in behaviour.
+- `/admin/tags` — create tags, edit name / kind / sort order / **hidden synonyms**, deactivate and reactivate. Saving regenerates `Tag.searchTerms` (normalized name + synonyms, deduped) in one transaction, with the same normalizer the typeahead applies to queries. Slugs are stable on rename because they are in URLs and seed data.
+- `/admin/users` — search by handle, name or email; suspend / reinstate / close; make or remove admin. Shows status, standing, seller state and report counts.
+- `/admin/audit` — every admin write, newest first, with who, what, target and a JSON payload.
+
+**How it works**
+
+- `modules/admin/audit.ts#withAudit(adminUserId, entry, fn)` is the **only** way an admin write gets a transaction: it checks `isAdmin` (and `ACTIVE`), runs the change, and writes the `AdminAuditLog` row in the same transaction. The audit entry is a required argument, so an unlogged admin action does not typecheck; an action that throws rolls back its log line with it.
+- `resolveReport` and `setUserStatus` moved from `trust/mutations.ts` into `admin/mutations.ts` behind `withAudit`, and the report-queue actions moved to `admin.actions.ts`. The layout gate is UX; the module is the security boundary.
+- Migration `20261018120000_admin_audit`.
+
+**Tests** — `npm run test:int` 48 (+10): synonym found by search after create, regenerated on update (removed synonym gone), deactivation hides from search, duplicate refused; promote / demote / cannot demote self; closing deletes sessions; threshold stored and validated; every write refused for a non-admin; every action above logged; a rolled-back action leaves no log line.
+
 ## 2026-10-18 — Pre-request inquiry threads [§11.7]
 
 **What a user sees**

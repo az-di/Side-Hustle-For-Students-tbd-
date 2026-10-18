@@ -1,16 +1,16 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { listReportsForAdmin } from "@/modules/trust/queries";
 import { REPORT_KIND_LABELS } from "@/modules/trust/state";
 import { SETTING_KEYS, getNumberSetting } from "@/modules/trust/settings";
-import { resolveReportAction, setUserStatusAction } from "@/app/actions/trust.actions";
+import { resolveReportAction, setUserStatusAction } from "@/app/actions/admin.actions";
 import { Badge, Button, Card, EmptyState, PageHeader, RelativeTime } from "@/components/ui";
 
 export const metadata = { title: "Reports · Admin · HUSTL" };
 
 /**
- * The report queue. Admins only (User.isAdmin, set in Prisma Studio).
+ * The report queue. Admins only (the /admin layout gates; the module logs).
  *
  * Reports with status OPEN count towards suspension already, so the queue is
  * not a gate on safety — it is where a person decides whether a report stands.
@@ -20,7 +20,6 @@ export const metadata = { title: "Reports · Admin · HUSTL" };
 export default async function AdminReportsPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
-  if (!viewer.isAdmin) notFound();
 
   const [reports, threshold] = await Promise.all([
     listReportsForAdmin(),
@@ -33,7 +32,7 @@ export default async function AdminReportsPage() {
     <main className="space-y-8">
       <PageHeader
         title="Report queue"
-        subtitle={`Accounts are auto-suspended at a weighted total of ${threshold} (PlatformSetting.report_suspend_threshold).`}
+        subtitle={`Accounts are auto-suspended at a weighted total of ${threshold} — change it on the Overview tab.`}
       />
 
       <section>

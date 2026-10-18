@@ -46,7 +46,7 @@ Seeded personas: **Alex Kim** and **Zoe Williams** (buyers), **Maya Chen** and *
 | `npm run test:int` | Integration tests against the Postgres in `DATABASE_URL` (safe on a seeded dev DB) |
 | `npm run db:seed` | Idempotent seed; safe to re-run |
 | `npm run db:reset` | Drop, re-migrate, re-seed |
-| `npm run db:studio` | Prisma Studio — this is the admin console for now |
+| `npm run db:studio` | Prisma Studio — escape hatch; the admin console is `/admin` (`User.isAdmin`) |
 
 ## How the code is laid out
 
@@ -107,8 +107,8 @@ Note: Vultr blocks outbound port 25 by default. That does not affect us — Rese
 
 Built: the uw.edu gate, tag search with hidden synonyms ("photoshoot" → Photography) and course codes, seller profiles with listings and portfolio links, pause, open **and** direct requests with budgets and deadlines, multi-seller responses with buyer selection, thread-scoped messaging, the mutual completion handshake with auto-confirm, reviews, and in-app notifications with a polled badge.
 
-Also built: reports and mutual blocking with auto-suspension and an admin report queue (`/admin/reports`, `User.isAdmin`); email notifications through a transactional outbox with a daily digest and one-click unsubscribe; portfolio uploads (photos, video, PDF) stored on a volume at `MEDIA_DIR`; watched-tag alerts ("a seller just opened up to a tag you requested") with an off switch at `/settings/watched-tags`. See `CHANGELOG.md` for each feature as it lands.
+Also built: reports and mutual blocking with auto-suspension; email notifications through a transactional outbox with a daily digest and one-click unsubscribe; portfolio uploads (photos, video, PDF) stored on a volume at `MEDIA_DIR`; watched-tag alerts ("a seller just opened up to a tag you requested") with an off switch at `/settings/watched-tags`; pre-request inquiry threads; and an admin console at `/admin` (report queue, tag and synonym editing, users, a tunable suspend threshold, and an audit log of every admin write). See `CHANGELOG.md` for each feature as it lands.
 
-Not built yet: the full admin console (use Prisma Studio). HANDOFF.md §11 has the rest of the list with what each would take.
+HANDOFF.md §11 has what is still open (rate limiting, more tests, the full course catalog, legal pages) with what each would take.
 
 Before any real launch: the F-1 notice already shown at signup needs a legal read, as do the academic-integrity rules on course tags, the cottage-food question on Cooking/Baking, and a default ownership-of-work clause.
