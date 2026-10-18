@@ -1,12 +1,18 @@
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { env } from "@/lib/env";
 import { formatCents } from "@/lib/money";
+import { listPortfolio, mediaUsage } from "@/modules/media/queries";
+import { MAX_PORTFOLIO_ITEMS, formatBytes } from "@/modules/media/state";
 import { becomeSellerAction, setPausedAction } from "@/app/actions/marketplace.actions";
+import { deletePortfolioItemAction } from "@/app/actions/media.actions";
+import { PortfolioGrid } from "@/components/portfolio-grid";
 import { Badge, Button, ButtonLink, Card, Field, Input, PageHeader, TagChip } from "@/components/ui";
 import { SellerProfileForm } from "./seller-profile-form";
 import { SellerTagPicker } from "./seller-tag-picker";
 import { ListingForm } from "./listing-form";
+import { PortfolioUploader } from "./portfolio-uploader";
 
 export const metadata = { title: "Selling · HUSTL" };
 
@@ -72,6 +78,7 @@ export default async function SellerSettingsPage() {
   }
 
   const profile = me.sellerProfile;
+  const [portfolio, usage] = await Promise.all([listPortfolio(viewer.id), mediaUsage(viewer.id)]);
 
   return (
     <main className="space-y-8">
@@ -126,6 +133,32 @@ export default async function SellerSettingsPage() {
               portfolioLinks: profile.portfolioLinks.join("\n"),
             }}
           />
+        </Card>
+      </section>
+
+      <section>
+        <h2 className="mb-2 text-sm font-semibold">
+          Portfolio ({portfolio.length}/{MAX_PORTFOLIO_ITEMS})
+        </h2>
+        <p className="mb-3 text-xs text-ink-soft">
+          Photos, clips and PDFs shown on your profile. {formatBytes(usage.usedBytes)} of {formatBytes(usage.maxBytes)}{" "}
+          used. Links go in the profile form above.
+        </p>
+        <div className="mb-3">
+          <PortfolioGrid
+            items={portfolio}
+            actions={(item) => (
+              <form action={deletePortfolioItemAction}>
+                <input type="hidden" name="itemId" value={item.id} />
+                <button type="submit" className="text-xs text-ink-faint hover:text-danger" aria-label="Delete">
+                  Delete
+                </button>
+              </form>
+            )}
+          />
+        </div>
+        <Card>
+          <PortfolioUploader maxFileLabel={formatBytes(env.MEDIA_MAX_FILE_BYTES)} />
         </Card>
       </section>
 

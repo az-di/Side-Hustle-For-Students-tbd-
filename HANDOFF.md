@@ -84,7 +84,7 @@ Against the spec's 14 in-scope items:
 | --- | --- | --- |
 | 1 | Sign-up restricted to verified UW email | ✅ Email OTP; enforced in app code **and** as a DB CHECK constraint |
 | 2 | Task tags, flat list, hidden synonyms, found by search | ✅ 15 service tags + 20 course codes, each with a hidden synonym list. ⚠️ Not the full UW catalog; tags are edited in the seed file, not a UI |
-| 3 | Seller profile: bio, tags, portfolio, reviews, job history | ✅ All of it. ⚠️ Portfolio is **links only** — no hosted media |
+| 3 | Seller profile: bio, tags, portfolio, reviews, job history | ✅ All of it, including hosted photos/video/PDF (`MEDIA_DIR` volume) plus links |
 | 4 | Seller tags and listings | ✅ Listings with flat and/or hourly pricing, turnaround, tags |
 | 5 | Pause | ✅ Stays listed with a Paused badge, excluded from fan-out and direct requests |
 | 6 | Open and direct requests | ✅ Both, including one thread per responder and losers closed out on selection |
@@ -391,9 +391,18 @@ daily digest for the fan-out kind, in-process drain timer plus `POST /api/email/
 
 </details>
 
-### 4. Media uploads
+### 4. Media uploads — DONE
+
+**Built — see `src/modules/media/` and the CHANGELOG entry.** Local volume (`MEDIA_DIR`), sniffed types, served by
+`/media/[key]`. Links were kept in `SellerProfile.portfolioLinks` rather than folded into `PortfolioItem`; hosted
+media is the new `MediaAsset` + `PortfolioItem` pair. **Deploy note: mount a persistent volume at `MEDIA_DIR` in
+Coolify or uploads vanish on redeploy.**
+
+<details><summary>Original plan (kept for reference)</summary>
 
 Portfolio is links-only today. On your own box there is no 4.5 MB serverless body cap, so the simple path works: accept the upload, write to a mounted volume, serve through the app. Add a `MediaAsset` model (`storageKey`, `kind`, `mimeType`, `bytes`, `status`) and a `PortfolioItem` that is either a link or an asset. Set a sanity cap (~200 MB) or the disk fills. Move to Vultr Object Storage with presigned URLs when disk or bandwidth becomes the constraint — that also decouples media from the instance lifecycle.
+
+</details>
 
 ### 5. Module boundary enforcement
 
@@ -455,6 +464,7 @@ One instance runs the app and Postgres. Budget 45–90 minutes the first time, a
 5. **Create a Postgres resource** in Coolify; copy its internal connection string into the app's `DATABASE_URL`.
 6. **Connect this repo**, set env (below), add the domain, enable HTTPS. Traefik runs the Let's Encrypt HTTP-01 challenge, so **ports 80 and 443 must be open** in the Vultr firewall **and** on the box. Open 22, 80, 443 only — Postgres stays on the Docker network, never exposed.
 7. **Set the start command to migrate**: `npx prisma migrate deploy && npm start`. Without this you ship a schema-less database. Seed once by hand: `npx prisma db seed`.
+   **Add a persistent volume** mounted at `/app/data/media` (or wherever `MEDIA_DIR` points) — portfolio uploads live on disk and a redeploy without the volume deletes them.
 8. **Snapshot the instance** once the demo path works. Restoring a snapshot beats debugging a dead box.
 
 ```

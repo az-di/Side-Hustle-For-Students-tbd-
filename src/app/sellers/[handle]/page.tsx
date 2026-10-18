@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
 import { getSellerByHandle } from "@/modules/catalog/queries";
+import { listPortfolio } from "@/modules/media/queries";
 import { relationshipWith } from "@/modules/trust/queries";
+import { PortfolioGrid } from "@/components/portfolio-grid";
 import { SafetyMenu } from "@/components/safety-menu";
 import {
   Avatar,
@@ -23,7 +25,10 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
 
   const profile = seller.sellerProfile;
   const isMe = viewer?.id === seller.id;
-  const relationship = viewer && !isMe ? await relationshipWith(viewer.id, seller.id) : null;
+  const [relationship, portfolio] = await Promise.all([
+    viewer && !isMe ? relationshipWith(viewer.id, seller.id) : null,
+    profile ? listPortfolio(seller.id) : [],
+  ]);
 
   // A blocked pair sees a stub, not a profile — and the same stub whichever
   // way the block runs, so a blocked person cannot tell.
@@ -181,9 +186,16 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
             </section>
           ) : null}
 
+          {portfolio.length > 0 ? (
+            <section className="mb-6">
+              <h2 className="mb-2 text-sm font-semibold">Work</h2>
+              <PortfolioGrid items={portfolio} />
+            </section>
+          ) : null}
+
           {profile.portfolioLinks.length > 0 ? (
             <section className="mb-6">
-              <h2 className="mb-2 text-sm font-semibold">Portfolio</h2>
+              <h2 className="mb-2 text-sm font-semibold">{portfolio.length > 0 ? "More" : "Portfolio"}</h2>
               <ul className="space-y-1.5">
                 {profile.portfolioLinks.map((link) => (
                   <li key={link}>

@@ -2,6 +2,29 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Media uploads [§11.4]
+
+**What a user sees**
+
+- Sellers upload photos, short videos and PDFs to a **Portfolio** section in `/settings/seller` (caption optional, up to 24 items, 25 MB per file, 200 MB per account). They appear as a grid under **Work** on the public profile; the existing portfolio links stay and render below it.
+- Files are served from the app at `/media/<key>` with a long immutable cache.
+
+**How it works**
+
+- New module `src/modules/media/`: `state.ts` (pure: magic-byte sniffing, caps, key shape), `storage.ts` (the disk adapter — swap this file plus `mediaUrl()` to move to object storage), `mutations.ts`, `queries.ts`.
+- The content type is decided by **sniffing the bytes**, never by the upload's declared MIME type or filename. Only JPG, PNG, GIF, WebP, MP4, MOV, WebM and PDF are accepted, so an HTML or SVG file (both can run script when served) can never be stored. The serving route sends `X-Content-Type-Options: nosniff` and the type from the row.
+- Storage keys are random bare filenames (`<32 hex>.<ext>`), enforced by a regex in code **and** a CHECK constraint, so neither a URL nor a row can become a path.
+- Ordering: file written before the row commits; row deleted before the file is removed. Worst case after a crash is an orphan file, never a row pointing at nothing.
+- Uploads go through a server action; `next.config.ts` raises `serverActions.bodySizeLimit` to 30 MB.
+- Env: `MEDIA_DIR` (default `./data/media`, gitignored; **mount a persistent volume here in Coolify**), `MEDIA_MAX_FILE_BYTES`, `MEDIA_MAX_TOTAL_BYTES`.
+- Migration `20261018090000_media`: `MediaAsset`, `PortfolioItem`, two CHECK constraints.
+
+**Tests**
+
+- `npm test` — 71 (+9: sniffing incl. refusing HTML/SVG, caps, key shape).
+- `npm run test:int` — 26 (+4): upload stores a sniffed file and lists a served URL, refuses non-media, refuses non-sellers, owner-only delete removes the file.
+- Smoke-tested over HTTP against `next start`: 200 with `image/png` and the immutable cache header, 404 for a missing key and for a traversal attempt, 404 after delete.
+
 ## 2026-10-18 — Email notifications [§11.3]
 
 **What a user sees**

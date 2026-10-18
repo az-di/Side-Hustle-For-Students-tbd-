@@ -45,6 +45,8 @@ model User {
   emailUnsubKey String  @unique @default(dbgenerated("gen_random_uuid()::text"))
 
   outboundEmails OutboundEmail[]
+  mediaAssets    MediaAsset[]
+  portfolioItems PortfolioItem[]
   trust          UserTrust?
   blocksMade     Block[]  @relation("BlocksMade")
   blocksReceived Block[]  @relation("BlocksReceived")
@@ -512,6 +514,49 @@ model PlatformSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// ────────────────────────────────── media ─────────────────────────────────
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+  PDF
+}
+
+/// A file on the media volume (MEDIA_DIR), served by /media/[key]. The row
+/// is the source of truth for the content type: the extension in storageKey
+/// is cosmetic. Type is decided by sniffing the bytes, never by the upload's
+/// declared MIME type.
+model MediaAsset {
+  id          String    @id @default(cuid())
+  ownerUserId String
+  kind        MediaKind
+  mimeType    String
+  bytes       Int
+  storageKey  String    @unique // "<random>.<ext>", no path separators
+  createdAt   DateTime  @default(now())
+
+  owner         User           @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  portfolioItem PortfolioItem?
+
+  @@index([ownerUserId, createdAt(sort: Desc)])
+}
+
+/// One tile in a seller's portfolio. Links live in SellerProfile.portfolioLinks;
+/// this is for hosted media.
+model PortfolioItem {
+  id           String   @id @default(cuid())
+  sellerUserId String
+  assetId      String   @unique
+  caption      String?
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  seller User       @relation(fields: [sellerUserId], references: [id], onDelete: Cascade)
+  asset  MediaAsset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@index([sellerUserId, sortOrder, createdAt])
 }
 
 // ──────────────────────────────── email outbox ────────────────────────────

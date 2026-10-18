@@ -46,3 +46,6 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated
+
+# uploaded media (MEDIA_DIR); a mounted volume in production
+/data

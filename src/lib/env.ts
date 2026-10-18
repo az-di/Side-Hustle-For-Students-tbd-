@@ -30,6 +30,13 @@ const schema = z.object({
   /** Bearer token for /api/email/drain. Unset = route disabled. */
   CRON_SECRET: z.string().optional(),
 
+  /** Where uploaded media lives. A mounted volume in production. */
+  MEDIA_DIR: z.string().default("./data/media"),
+  /** Per-file cap. Must stay under next.config's serverActions.bodySizeLimit. */
+  MEDIA_MAX_FILE_BYTES: z.coerce.number().int().positive().default(25 * 1024 * 1024),
+  /** Per-user cap across all their media, so one account cannot fill the disk. */
+  MEDIA_MAX_TOTAL_BYTES: z.coerce.number().int().positive().default(200 * 1024 * 1024),
+
   /** Only @uw.edu may sign up. Overridable so teammates can test locally. */
   ALLOWED_EMAIL_DOMAIN: z.string().default("uw.edu"),
 
