@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { invalid, notAllowed, notFound } from "@/lib/errors";
+import { consumeRateLimit } from "@/modules/ratelimit/mutations";
 import { MAX_CAPTION_LENGTH, checkUploadLimits, sniffMediaType } from "./state";
 import { newStorageKey, removeMedia, writeMedia } from "./storage";
 
@@ -37,6 +38,7 @@ export async function uploadPortfolioMedia(params: {
     maxTotalBytes: env.MEDIA_MAX_TOTAL_BYTES,
   });
   if (!limits.ok) throw invalid(limits.message);
+  await consumeRateLimit("upload", params.sellerUserId);
 
   const storageKey = newStorageKey(sniffed.ext);
   await writeMedia(storageKey, params.bytes);

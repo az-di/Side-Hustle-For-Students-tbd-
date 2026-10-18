@@ -2,6 +2,32 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Rate limiting [§11.11]
+
+**What it stops**
+
+| Action | Limit | Keyed by |
+| --- | --- | --- |
+| Sign-in code requested | 20 / 15 min | client IP (first `X-Forwarded-For`, which Traefik sets) |
+| Sign-in code requested | 5 / 15 min | email address |
+| Code verification | 15 / 15 min | email address (on top of 5 attempts per code) |
+| Request posted (open or direct) | 10 / hour | buyer |
+| Response to an open request | 30 / hour | seller |
+| Message sent | 120 / hour | sender |
+| Report filed | 5 / day | reporter |
+| Portfolio upload | 30 / hour | seller |
+
+Plus the existing 5 new inquiry threads per day. Each refusal is a friendly `RATE_LIMITED` message shown inline.
+
+**How it works**
+
+- `RateLimit(key, windowStart, count)` in Postgres — no Redis, no `@upstash/ratelimit`: this runs on one box and the counts are tiny. `modules/ratelimit/mutations.ts#consumeRateLimit()` is **one atomic `INSERT … ON CONFLICT DO UPDATE … RETURNING`** that starts, bumps or resets the fixed window, so concurrent hits cannot both read "4" and both write "5" (tested with `Promise.allSettled`). Clock bound from JS, per the §10 gotcha.
+- Limits are applied inside the module mutations (they already have the actor id), except OTP, which is applied in `auth.actions.ts` because `lib/auth` must not depend on modules.
+- The rules table is `modules/ratelimit/state.ts` (pure, unit-tested). The instrumentation timer prunes dead rows roughly hourly.
+- Migration `20261018130000_rate_limit`.
+
+**Tests** — `npm test` 86 (+5), `npm run test:int` 52 (+4): max allowed then refused then reset after the window; exact counting under concurrency; subjects and actions independent; pruning.
+
 ## 2026-10-18 — Admin console with an audit log [§11.8]
 
 **What an admin sees** (`User.isAdmin`; non-admins get a 404)

@@ -13,8 +13,10 @@ export async function register(): Promise<void> {
   if (env.EMAIL_DRAIN_INTERVAL_MS <= 0) return;
 
   const { drainOutbox } = await import("@/modules/email/outbox");
+  const { pruneRateLimits } = await import("@/modules/ratelimit/mutations");
 
   let running = false;
+  let ticks = 0;
   const tick = async () => {
     if (running) return; // a slow send must not stack drains
     running = true;
@@ -23,6 +25,8 @@ export async function register(): Promise<void> {
       if (tally.sent + tally.failed + tally.retried + tally.skipped > 0) {
         console.info("email outbox", tally);
       }
+      // Housekeeping rides on the same timer, roughly hourly.
+      if (++ticks % 60 === 0) await pruneRateLimits();
     } catch (err) {
       console.error("email outbox drain failed", err);
     } finally {

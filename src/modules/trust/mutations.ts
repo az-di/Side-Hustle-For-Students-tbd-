@@ -2,6 +2,7 @@ import type { ReportKind } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import { conflict, invalid, notAllowed, notFound } from "@/lib/errors";
 import type { Tx } from "@/lib/tx";
+import { consumeRateLimit } from "@/modules/ratelimit/mutations";
 import { isBlocked } from "./block-filter";
 import { REPORT_WEIGHTS, canAct, evaluateTrust, negativeWeight } from "./state";
 import { SETTING_KEYS, getNumberSetting } from "./settings";
@@ -104,6 +105,7 @@ export async function reportUser(params: {
     select: { id: true },
   });
   if (existing) throw conflict("You have already reported this — it is in the queue.");
+  await consumeRateLimit("report_create", params.reporterUserId);
 
   return db.$transaction(async (tx) => {
     const report = await tx.report.create({

@@ -13,7 +13,8 @@ export class AppError extends Error {
       | "NOT_ALLOWED"
       | "INVALID"
       | "CONFLICT" // someone else changed it first (or a double-click)
-      | "PAUSED",
+      | "PAUSED"
+      | "RATE_LIMITED",
   ) {
     super(message);
     this.name = "AppError";
@@ -30,6 +31,9 @@ export const invalid = (message: string) => new AppError(message, "INVALID");
  */
 export const conflict = (message = "That already changed — reload and try again.") =>
   new AppError(message, "CONFLICT");
+
+export const rateLimited = (message = "Slow down — try again in a little while.") =>
+  new AppError(message, "RATE_LIMITED");
 
 export function toUserMessage(err: unknown, fallback = "Something went wrong. Try again."): string {
   if (err instanceof AppError) return err.message;

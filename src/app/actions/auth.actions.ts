@@ -1,5 +1,6 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
@@ -11,8 +12,15 @@ import {
   verifyOtpAndSignIn,
 } from "@/lib/auth";
 import { isDemoMode } from "@/lib/env";
+import { AppError } from "@/lib/errors";
 import { mayEchoOtpCode, sendOtpEmail } from "@/lib/mail";
 import { findDemoPersona } from "@/modules/identity/queries";
+import { consumeRateLimit } from "@/modules/ratelimit/mutations";
+import { clientIpFrom } from "@/modules/ratelimit/state";
+
+async function clientIp(): Promise<string> {
+  return clientIpFrom((await headers()).get("x-forwarded-for"));
+}
 
 export type RequestCodeState = {
   ok: boolean;
@@ -31,6 +39,9 @@ export async function requestCodeAction(
 
   try {
     const email = assertAllowedEmail(raw);
+    // Per network and per address, before a row or an email is produced.
+    await consumeRateLimit("otp_ip", await clientIp());
+    await consumeRateLimit("otp_email", email);
     const { code } = await createOtpChallenge(email);
     const delivery = await sendOtpEmail(email, code);
 
@@ -41,7 +52,7 @@ export async function requestCodeAction(
       demoCode: mayEchoOtpCode() ? code : undefined,
     };
   } catch (err) {
-    if (err instanceof AuthError) return { ok: false, error: err.message };
+    if (err instanceof AuthError || err instanceof AppError) return { ok: false, error: err.message };
     console.error("requestCodeAction", err);
     return { ok: false, error: "Something went wrong sending that code. Try again." };
   }
@@ -69,10 +80,11 @@ export async function verifyCodeAction(
 
   let isNewUser = false;
   try {
+    await consumeRateLimit("otp_verify", parsed.data.email.trim().toLowerCase());
     const result = await verifyOtpAndSignIn(parsed.data.email, parsed.data.code);
     isNewUser = result.isNewUser;
   } catch (err) {
-    if (err instanceof AuthError) return { error: err.message };
+    if (err instanceof AuthError || err instanceof AppError) return { error: err.message };
     console.error("verifyCodeAction", err);
     return { error: "Could not sign you in. Try requesting a new code." };
   }

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { invalid, notAllowed, notFound } from "@/lib/errors";
 import { notify } from "@/modules/notifications/mutations";
+import { consumeRateLimit } from "@/modules/ratelimit/mutations";
 import { assertCanReach } from "@/modules/trust/mutations";
 import { MAX_MESSAGE_LENGTH, canOpenInquiry, inquiryKey } from "./state";
 
@@ -73,6 +74,7 @@ export async function sendMessage(params: {
   // A thread outlives a block (the job history stays readable), but nobody
   // can post into it while one exists.
   await assertCanReach(params.senderUserId, recipient);
+  await consumeRateLimit("message_send", params.senderUserId);
 
   await db.$transaction(async (tx) => {
     await tx.message.create({

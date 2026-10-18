@@ -475,9 +475,18 @@ Current coverage is the money boundary and both state machines. Highest-value ad
 
 Use a `ClockPort`/`FakeClock` so the 7-day window is testable in milliseconds — today `AUTO_COMPLETE_MS` is read directly from env in `markJobComplete`.
 
-### 11. Rate limiting
+### 11. Rate limiting — DONE
+
+**Built — see `src/modules/ratelimit/` and the CHANGELOG entry.** Postgres fixed-window counters (one atomic
+upsert), no Redis. OTP per IP and per address, request / response / message / report / upload creation, plus the
+inquiry-thread cap. Limits are a table in `ratelimit/state.ts`. If the app ever runs on more than one box, this still
+works (the counter is in the shared database).
+
+<details><summary>Original plan (kept for reference)</summary>
 
 None exists. Before any public launch, limit OTP requests per IP and per address, request creation, responses, and messages. `@upstash/ratelimit` with a Postgres fallback keeps local dev dependency-free.
+
+</details>
 
 ### 12. Legal and policy
 

@@ -4,6 +4,7 @@ import { AppError, conflict, invalid, notAllowed, notFound } from "@/lib/errors"
 import { grossFromNet } from "@/lib/money";
 import { recordInterest } from "@/modules/interests/mutations";
 import { fanOutOpenRequest, notify } from "@/modules/notifications/mutations";
+import { consumeRateLimit } from "@/modules/ratelimit/mutations";
 import { assertCanReach } from "@/modules/trust/mutations";
 import { applyRequestEvent, type RequestStateView } from "./state";
 
@@ -73,6 +74,7 @@ export async function createDirectRequest(
   // as in every feed — a policy check cannot filter a list, and a list filter
   // cannot stop a direct URL.
   await assertCanReach(input.buyerUserId, input.targetSellerUserId);
+  await consumeRateLimit("request_create", input.buyerUserId);
 
   const seller = await db.sellerProfile.findUnique({
     where: { userId: input.targetSellerUserId },
@@ -136,6 +138,7 @@ export async function createDirectRequest(
 export async function createOpenRequest(input: CreateRequestInput): Promise<{ requestId: string; notified: number }> {
   assertBudget(input);
   assertTags(input.tagIds);
+  await consumeRateLimit("request_create", input.buyerUserId);
 
   return db.$transaction(async (tx) => {
     const request = await tx.request.create({
@@ -222,6 +225,7 @@ export async function respondToOpenRequest(params: {
   );
   if (!decision.ok) throw notAllowed(decision.message);
   await assertCanReach(params.sellerUserId, request.buyerUserId);
+  await consumeRateLimit("response_create", params.sellerUserId);
 
   return db.$transaction(async (tx) => {
     const response = await tx.requestResponse.create({

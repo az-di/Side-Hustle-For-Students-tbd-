@@ -543,6 +543,18 @@ model PlatformSetting {
   updatedAt DateTime @updatedAt
 }
 
+/// Fixed-window rate limit counters, one row per (action, subject). Bumped
+/// atomically by modules/ratelimit/mutations.ts; rows older than a day are
+/// pruned by the instrumentation timer. Postgres rather than Redis because
+/// this runs on one box and the counts are tiny.
+model RateLimit {
+  key         String   @id // "{action}:{subject}", e.g. "otp_ip:1.2.3.4"
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@index([windowStart])
+}
+
 /// Every admin write goes through modules/admin/audit.ts#withAudit, whose
 /// signature requires this row's content — an unlogged admin action does
 /// not typecheck. Rows are never updated or deleted.
