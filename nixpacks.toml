@@ -1,0 +1,5 @@
+# Coolify's default Node 22 archive is 22.11.0. Prisma 7 accepts Node 24.
+# This nixpkgs commit ships Node 24.14.0. Also set NIXPACKS_NODE_VERSION=24
+# on the Coolify app, available at build time.
+[phases.setup]
+nixpkgsArchive = "1267bb4920d0fc06ea916734c11b0bf004bbe17e"
