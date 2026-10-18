@@ -33,7 +33,7 @@ export function LoginForm({ allowedDomain }: { allowedDomain: string }) {
               Email is not configured in this environment, so nothing was actually delivered — use the code below.
             </p>
           ) : null}
-          {requestState.demoCode ? (
+          {requestState.demoCode && requestState.emailDelivered !== false ? (
             <p className="mt-2 rounded-xl bg-brand-soft px-3 py-2 text-sm text-brand-ink">
               Demo mode code: <span className="font-mono text-base font-semibold">{requestState.demoCode}</span>
             </p>
@@ -47,7 +47,8 @@ export function LoginForm({ allowedDomain }: { allowedDomain: string }) {
             autoComplete="one-time-code"
             pattern="\d{6}"
             maxLength={6}
-            placeholder="123456"
+            placeholder={requestState.demoCode ?? "123456"}
+            defaultValue={requestState.demoCode}
             required
             autoFocus
             className="text-center font-mono text-lg tracking-[0.4em]"

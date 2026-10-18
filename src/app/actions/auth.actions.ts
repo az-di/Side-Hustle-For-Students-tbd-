@@ -25,7 +25,10 @@ async function clientIp(): Promise<string> {
 export type RequestCodeState = {
   ok: boolean;
   email?: string;
-  /** Present only in DEMO_MODE — never in a real deployment. */
+  /**
+   * The code, when the screen is allowed to show it: demo mode, or email was
+   * not actually sent. Absent once a message is delivered.
+   */
   demoCode?: string;
   emailDelivered?: boolean;
   error?: string;
@@ -49,7 +52,7 @@ export async function requestCodeAction(
       ok: true,
       email,
       emailDelivered: delivery.delivered,
-      demoCode: mayEchoOtpCode() ? code : undefined,
+      demoCode: mayEchoOtpCode() || !delivery.delivered ? code : undefined,
     };
   } catch (err) {
     if (err instanceof AuthError || err instanceof AppError) return { ok: false, error: err.message };
