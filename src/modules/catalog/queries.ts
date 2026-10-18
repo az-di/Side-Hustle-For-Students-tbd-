@@ -74,6 +74,31 @@ export async function getTagBySlug(slug: string) {
   return db.tag.findUnique({ where: { slug }, select: { id: true, name: true, kind: true, slug: true } });
 }
 
+/**
+ * Course tags grouped by subject ("MATH", "CSE", …), for the seller tag
+ * editor's bulk-select. Only active tags; sorted so numbers read in order.
+ */
+export async function listCourseTagsBySubject(): Promise<
+  { subject: string; tags: { id: string; name: string; slug: string; kind: "COURSE" }[] }[]
+> {
+  const rows = await db.tag.findMany({
+    where: { kind: "COURSE", isActive: true },
+    select: { id: true, name: true, slug: true },
+    orderBy: { name: "asc" },
+  });
+
+  const groups = new Map<string, { id: string; name: string; slug: string; kind: "COURSE" }[]>();
+  for (const row of rows) {
+    const subject = row.name.replace(/\s*\d.*$/, "").trim() || "Other";
+    if (!groups.has(subject)) groups.set(subject, []);
+    groups.get(subject)!.push({ ...row, kind: "COURSE" });
+  }
+
+  return [...groups.entries()]
+    .map(([subject, tags]) => ({ subject, tags }))
+    .sort((a, b) => a.subject.localeCompare(b.subject));
+}
+
 export async function listServiceTags() {
   return db.tag.findMany({
     where: { kind: "SERVICE", isActive: true },

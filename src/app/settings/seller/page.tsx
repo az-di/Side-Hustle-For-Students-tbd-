@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { formatCents } from "@/lib/money";
+import { listCourseTagsBySubject } from "@/modules/catalog/queries";
 import { getSellerSettings } from "@/modules/identity/queries";
 import { listPortfolio, mediaUsage } from "@/modules/media/queries";
 import { MAX_PORTFOLIO_ITEMS, formatBytes } from "@/modules/media/state";
@@ -13,6 +14,7 @@ import { SellerProfileForm } from "./seller-profile-form";
 import { SellerTagPicker } from "./seller-tag-picker";
 import { ListingForm } from "./listing-form";
 import { PortfolioUploader } from "./portfolio-uploader";
+import { CoursePicker } from "./course-picker";
 
 export const metadata = { title: "Selling · HUSTL" };
 
@@ -48,7 +50,11 @@ export default async function SellerSettingsPage() {
   }
 
   const profile = me.sellerProfile;
-  const [portfolio, usage] = await Promise.all([listPortfolio(viewer.id), mediaUsage(viewer.id)]);
+  const [portfolio, usage, courseGroups] = await Promise.all([
+    listPortfolio(viewer.id),
+    mediaUsage(viewer.id),
+    listCourseTagsBySubject(),
+  ]);
 
   return (
     <main className="space-y-8">
@@ -86,6 +92,9 @@ export default async function SellerSettingsPage() {
           You are notified when someone posts an open request with one of these. Tutoring uses course codes.
         </p>
         <SellerTagPicker current={me.sellerTags.map((st) => st.tag)} />
+        <div className="mt-3">
+          <CoursePicker groups={courseGroups} heldTagIds={new Set(me.sellerTags.map((st) => st.tag.id))} />
+        </div>
       </section>
 
       <section>

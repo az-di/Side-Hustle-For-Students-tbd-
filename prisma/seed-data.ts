@@ -154,29 +154,130 @@ export const SERVICE_TAGS: SeedTag[] = [
 /**
  * A curated set of the courses students actually hire tutors for, rather than
  * the whole UW catalog — thousands of zero-seller tags would drown the 15 real
- * service tags in every search result.
+ * service tags in every search result. Grouped by subject; the seller tag
+ * editor offers "add all MATH" style bulk selection over these groups.
+ *
+ * `course()` builds the standard search terms ("math 124", "math124") and
+ * appends the extra synonyms given. Adding a course is one line; a scraper
+ * against the public catalog can replace this list later (HANDOFF §11.9).
  */
+function course(subject: string, number: string, synonyms: string[] = []): SeedTag {
+  const code = `${subject} ${number}`;
+  return {
+    slug: `${subject.toLowerCase()}-${number.toLowerCase()}`,
+    name: code,
+    kind: "COURSE",
+    searchTerms: [code.toLowerCase(), `${subject}${number}`.toLowerCase(), ...synonyms],
+  };
+}
+
 export const COURSE_TAGS: SeedTag[] = [
-  { slug: "math-124", name: "MATH 124", kind: "COURSE", searchTerms: ["math 124", "math124", "calc 1", "calculus 1", "calculus"] },
-  { slug: "math-125", name: "MATH 125", kind: "COURSE", searchTerms: ["math 125", "math125", "calc 2", "calculus 2", "integrals"] },
-  { slug: "math-126", name: "MATH 126", kind: "COURSE", searchTerms: ["math 126", "math126", "calc 3", "calculus 3", "multivariable"] },
-  { slug: "math-208", name: "MATH 208", kind: "COURSE", searchTerms: ["math 208", "math208", "linear algebra", "matrices"] },
-  { slug: "cse-121", name: "CSE 121", kind: "COURSE", searchTerms: ["cse 121", "cse121", "intro to programming", "intro cs", "java intro"] },
-  { slug: "cse-122", name: "CSE 122", kind: "COURSE", searchTerms: ["cse 122", "cse122", "intro programming 2", "data structures intro"] },
-  { slug: "cse-123", name: "CSE 123", kind: "COURSE", searchTerms: ["cse 123", "cse123", "intro programming 3"] },
-  { slug: "cse-143", name: "CSE 143", kind: "COURSE", searchTerms: ["cse 143", "cse143", "computer programming 2", "recursion"] },
-  { slug: "cse-311", name: "CSE 311", kind: "COURSE", searchTerms: ["cse 311", "cse311", "foundations of computing", "discrete math"] },
-  { slug: "cse-332", name: "CSE 332", kind: "COURSE", searchTerms: ["cse 332", "cse332", "data structures", "data structures and parallelism"] },
-  { slug: "chem-142", name: "CHEM 142", kind: "COURSE", searchTerms: ["chem 142", "chem142", "general chemistry", "gen chem"] },
-  { slug: "chem-152", name: "CHEM 152", kind: "COURSE", searchTerms: ["chem 152", "chem152", "general chemistry 2"] },
-  { slug: "phys-121", name: "PHYS 121", kind: "COURSE", searchTerms: ["phys 121", "phys121", "physics 121", "mechanics"] },
-  { slug: "phys-122", name: "PHYS 122", kind: "COURSE", searchTerms: ["phys 122", "phys122", "physics 122", "electromagnetism", "e and m"] },
-  { slug: "stat-311", name: "STAT 311", kind: "COURSE", searchTerms: ["stat 311", "stat311", "statistics", "elements of statistical methods"] },
-  { slug: "econ-200", name: "ECON 200", kind: "COURSE", searchTerms: ["econ 200", "econ200", "microeconomics", "micro econ"] },
-  { slug: "econ-201", name: "ECON 201", kind: "COURSE", searchTerms: ["econ 201", "econ201", "macroeconomics", "macro econ"] },
-  { slug: "biol-180", name: "BIOL 180", kind: "COURSE", searchTerms: ["biol 180", "biol180", "intro biology", "bio 180"] },
-  { slug: "amath-301", name: "AMATH 301", kind: "COURSE", searchTerms: ["amath 301", "amath301", "beginning scientific computing", "matlab"] },
-  { slug: "engl-131", name: "ENGL 131", kind: "COURSE", searchTerms: ["engl 131", "engl131", "english 131", "composition", "essay help"] },
+  // Math
+  course("MATH", "120", ["precalculus", "precalc"]),
+  course("MATH", "124", ["calc 1", "calculus 1", "calculus", "derivatives"]),
+  course("MATH", "125", ["calc 2", "calculus 2", "integrals"]),
+  course("MATH", "126", ["calc 3", "calculus 3", "multivariable"]),
+  course("MATH", "207", ["differential equations", "diff eq", "ode"]),
+  course("MATH", "208", ["linear algebra", "matrices"]),
+  course("MATH", "224", ["advanced multivariable", "vector calculus"]),
+  course("MATH", "300", ["intro to proofs", "proof writing"]),
+  course("MATH", "307", ["intro differential equations"]),
+  course("MATH", "308", ["matrix algebra"]),
+  course("MATH", "309", ["linear analysis"]),
+  course("MATH", "324", ["advanced multivariable calculus 2"]),
+  course("MATH", "394", ["probability 1"]),
+  // Computer science
+  course("CSE", "121", ["intro to programming", "intro cs", "java intro"]),
+  course("CSE", "122", ["intro programming 2", "data structures intro"]),
+  course("CSE", "123", ["intro programming 3"]),
+  course("CSE", "142", ["computer programming 1", "java"]),
+  course("CSE", "143", ["computer programming 2", "recursion"]),
+  course("CSE", "154", ["web programming", "html css javascript"]),
+  course("CSE", "160", ["data programming", "python intro"]),
+  course("CSE", "163", ["intermediate data programming", "pandas"]),
+  course("CSE", "311", ["foundations of computing", "discrete math"]),
+  course("CSE", "312", ["foundations of computing 2", "probability for cs"]),
+  course("CSE", "331", ["software design", "software design and implementation"]),
+  course("CSE", "332", ["data structures", "data structures and parallelism"]),
+  course("CSE", "333", ["systems programming", "c and c++"]),
+  course("CSE", "341", ["programming languages"]),
+  course("CSE", "344", ["databases", "sql", "data management"]),
+  course("CSE", "351", ["hardware software interface", "assembly"]),
+  course("CSE", "373", ["data structures and algorithms", "non majors data structures"]),
+  course("CSE", "374", ["intermediate programming", "c programming"]),
+  course("CSE", "391", ["unix tools", "command line"]),
+  course("CSE", "414", ["intro to data management", "sql"]),
+  course("CSE", "446", ["machine learning"]),
+  course("CSE", "473", ["artificial intelligence", "ai"]),
+  // Applied math and statistics
+  course("AMATH", "301", ["beginning scientific computing", "matlab"]),
+  course("AMATH", "351", ["ode", "differential equations applied"]),
+  course("AMATH", "352", ["applied linear algebra", "numerical analysis"]),
+  course("STAT", "220", ["basic statistics", "stats"]),
+  course("STAT", "311", ["statistics", "elements of statistical methods"]),
+  course("STAT", "390", ["probability and statistics for engineers"]),
+  course("STAT", "391", ["quantitative intro to probability"]),
+  // Chemistry
+  course("CHEM", "142", ["general chemistry", "gen chem"]),
+  course("CHEM", "152", ["general chemistry 2"]),
+  course("CHEM", "162", ["general chemistry 3"]),
+  course("CHEM", "223", ["organic chemistry 1", "orgo", "ochem"]),
+  course("CHEM", "237", ["organic chemistry", "orgo 1"]),
+  course("CHEM", "238", ["organic chemistry 2", "orgo 2"]),
+  course("CHEM", "239", ["organic chemistry 3", "orgo 3"]),
+  // Physics
+  course("PHYS", "114", ["general physics", "algebra based physics"]),
+  course("PHYS", "115", ["general physics 2"]),
+  course("PHYS", "116", ["general physics 3"]),
+  course("PHYS", "121", ["physics 121", "mechanics"]),
+  course("PHYS", "122", ["physics 122", "electromagnetism", "e and m"]),
+  course("PHYS", "123", ["physics 123", "waves", "optics"]),
+  // Biology and health
+  course("BIOL", "180", ["intro biology", "bio 180"]),
+  course("BIOL", "200", ["intro biology 2", "cell biology"]),
+  course("BIOL", "220", ["intro biology 3", "physiology"]),
+  course("BIOC", "405", ["biochemistry", "biochem"]),
+  course("BIOC", "406", ["biochemistry 2"]),
+  course("BIOSTAT", "310", ["biostatistics"]),
+  // Economics and business
+  course("ECON", "200", ["microeconomics", "micro econ"]),
+  course("ECON", "201", ["macroeconomics", "macro econ"]),
+  course("ECON", "300", ["intermediate micro"]),
+  course("ECON", "301", ["intermediate macro"]),
+  course("ECON", "311", ["economic statistics", "econometrics intro"]),
+  course("ACCTG", "215", ["intro to accounting", "financial accounting"]),
+  course("ACCTG", "225", ["managerial accounting"]),
+  course("FIN", "350", ["business finance", "corporate finance"]),
+  course("MKTG", "301", ["marketing"]),
+  // Informatics, HCDE, engineering
+  course("INFO", "200", ["intellectual foundations of informatics"]),
+  course("INFO", "201", ["foundational skills for data science", "r programming"]),
+  course("INFO", "300", ["research methods informatics"]),
+  course("INFO", "340", ["client side development", "react"]),
+  course("HCDE", "210", ["explorations in hcde", "user centered design"]),
+  course("EE", "215", ["circuits", "fundamentals of electrical engineering"]),
+  course("EE", "235", ["signals", "continuous time linear systems"]),
+  course("MSE", "170", ["materials science"]),
+  course("ME", "230", ["kinematics and dynamics"]),
+  course("CEE", "220", ["statics", "mechanics of materials"]),
+  course("AA", "210", ["engineering statics"]),
+  // Psychology, writing, languages, humanities
+  course("PSYCH", "101", ["intro psychology", "psych 101"]),
+  course("PSYCH", "202", ["biopsychology"]),
+  course("PSYCH", "209", ["fundamentals of psychological research"]),
+  course("ENGL", "131", ["english 131", "composition", "essay help"]),
+  course("ENGL", "182", ["composition multimodal"]),
+  course("PHIL", "120", ["intro logic", "logic"]),
+  course("LING", "200", ["intro linguistics"]),
+  course("SPAN", "101", ["spanish 1", "beginning spanish"]),
+  course("SPAN", "102", ["spanish 2"]),
+  course("SPAN", "103", ["spanish 3"]),
+  course("JAPAN", "111", ["japanese 1", "beginning japanese"]),
+  course("CHIN", "101", ["chinese 1", "beginning chinese"]),
+  course("KOREAN", "101", ["korean 1", "beginning korean"]),
+  course("FRENCH", "101", ["french 1", "beginning french"]),
+  course("POL S", "201", ["intro political theory"]),
+  course("HSTAA", "101", ["survey of us history", "american history"]),
 ];
 
 export const ALL_TAGS = [...SERVICE_TAGS, ...COURSE_TAGS];

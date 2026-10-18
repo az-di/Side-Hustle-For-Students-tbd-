@@ -6,7 +6,14 @@ import { z } from "zod";
 import { requireAnyViewer, requireViewer } from "@/lib/auth";
 import { toUserMessage } from "@/lib/errors";
 import { parseDollarsToCents } from "@/lib/money";
-import { becomeSeller, saveListing, saveSellerProfile, setSellerPaused, setSellerTag } from "@/modules/catalog/mutations";
+import {
+  addSellerTags,
+  becomeSeller,
+  saveListing,
+  saveSellerProfile,
+  setSellerPaused,
+  setSellerTag,
+} from "@/modules/catalog/mutations";
 import {
   acceptDirectRequest,
   cancelRequest,
@@ -313,6 +320,17 @@ export async function toggleSellerTagAction(formData: FormData): Promise<void> {
     on: String(formData.get("on")) === "true",
   });
 
+  revalidatePath("/settings/seller");
+  revalidatePath("/requests");
+}
+
+/** "Add all MATH": tagIds is a comma-separated list from the course picker. */
+export async function addSellerTagsAction(formData: FormData): Promise<void> {
+  const viewer = await requireViewer();
+  const tagIds = String(formData.get("tagIds") ?? "")
+    .split(",")
+    .filter(Boolean);
+  await addSellerTags({ userId: viewer.id, tagIds });
   revalidatePath("/settings/seller");
   revalidatePath("/requests");
 }

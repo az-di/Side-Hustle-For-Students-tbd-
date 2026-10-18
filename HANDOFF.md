@@ -83,7 +83,7 @@ Against the spec's 14 in-scope items:
 | # | Spec item | Status |
 | --- | --- | --- |
 | 1 | Sign-up restricted to verified UW email | ✅ Email OTP; enforced in app code **and** as a DB CHECK constraint |
-| 2 | Task tags, flat list, hidden synonyms, found by search | ✅ 15 service tags + 20 course codes, each with a hidden synonym list, editable at `/admin/tags`. ⚠️ Not the full UW catalog |
+| 2 | Task tags, flat list, hidden synonyms, found by search | ✅ 15 service tags + 100 curated course codes with hidden synonyms, editable at `/admin/tags`, bulk-select by subject for sellers. ⚠️ Curated, not the full UW catalog (by design, see §11.9) |
 | 3 | Seller profile: bio, tags, portfolio, reviews, job history | ✅ All of it, including hosted photos/video/PDF (`MEDIA_DIR` volume) plus links |
 | 4 | Seller tags and listings | ✅ Listings with flat and/or hourly pricing, turnaround, tags |
 | 5 | Pause | ✅ Stays listed with a Paused badge, excluded from fan-out and direct requests |
@@ -461,9 +461,17 @@ Prisma Studio covers it for now. When it does not: tag CRUD with synonym editing
 
 </details>
 
-### 9. Full UW course catalog
+### 9. Full UW course catalog — DONE (curated, not scraped)
+
+**100 courses are seeded** (`seed-data.ts`, one line each via `course()`), grouped by subject with "Add all MATH"
+bulk-select in the seller tag editor, and editable at `/admin/tags`. The scraper was deliberately not built; see the
+CHANGELOG entry for why and the plan below for how, if it is ever wanted.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 20 courses are seeded. A scraper against UW's public catalog producing a committed JSON would give full coverage, at the cost of thousands of zero-seller tags drowning the 15 real service tags in search. If you do it: keep courses grouped separately in results (already done), keep them out of the browse-all grid (already done), and add a subject bulk-select ("all MATH 1xx") in the seller tag editor.
+
+</details>
 
 ### 10. More tests — DONE
 

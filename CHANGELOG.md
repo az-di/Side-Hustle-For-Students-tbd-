@@ -2,6 +2,24 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Course catalog: 100 curated courses, bulk-select by subject [§11.9]
+
+**What a user sees**
+
+- **100 course tags** (was 20) across MATH, CSE, AMATH, STAT, CHEM, PHYS, BIOL/BIOC, ECON, ACCTG/FIN/MKTG, INFO/HCDE, EE/ME/CEE, PSYCH, ENGL, languages and more — the courses students actually hire tutors for, each with nicknames as hidden synonyms ("orgo" → CHEM 237, "diff eq" → MATH 207, "calc 3" → MATH 126).
+- In the seller tag editor, **Tutoring: add courses by subject** — every course grouped by subject, click one to add it or **Add all MATH** in one tap. Courses you already hold are greyed out.
+- Courses stay grouped separately in search results and out of the browse-all grid (both already true).
+
+**How it works**
+
+- `seed-data.ts#course(subject, number, synonyms)` builds the standard terms (`"math 124"`, `"math124"`) so adding a course is one line. Reseeding upserts by slug.
+- `catalog/queries.ts#listCourseTagsBySubject()` groups active course tags by the subject prefix; `catalog/mutations.ts#addSellerTags()` bulk-adds only the tags the seller lacks and alerts watchers once (through `notifyWatchers`, so §11.6's dedupe applies).
+- Admins add or rename courses at `/admin/tags` without a reseed.
+
+**Not done, on purpose** — the scraper against UW's public catalog. The handoff's own warning stands: thousands of zero-seller tags would drown the 15 real service tags. The one-line `course()` helper plus the admin editor is the cheap path until a scraper is worth it.
+
+**Tests** — `npm run test:int` 61 (+3): subject grouping and ordering; code / compact code / nickname search; bulk-add adds only missing tags and alerts watchers exactly once per tag.
+
 ## 2026-10-18 — Tests: concurrency, the full loop, and the money-leak e2e [§11.10]
 
 **What was added**

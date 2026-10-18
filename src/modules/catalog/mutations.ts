@@ -35,6 +35,29 @@ export async function setSellerPaused(params: { userId: string; paused: boolean 
   });
 }
 
+/**
+ * Bulk add ("all MATH"). Only tags the seller did not already hold are
+ * announced to watchers, and a tag they already have is left alone.
+ */
+export async function addSellerTags(params: { userId: string; tagIds: string[] }): Promise<{ added: number }> {
+  const unique = [...new Set(params.tagIds)];
+  if (unique.length === 0) return { added: 0 };
+
+  return db.$transaction(async (tx) => {
+    const had = new Set(
+      (await tx.sellerTag.findMany({ where: { sellerUserId: params.userId, tagId: { in: unique } }, select: { tagId: true } })).map(
+        (t) => t.tagId,
+      ),
+    );
+    const fresh = unique.filter((id) => !had.has(id));
+    if (fresh.length === 0) return { added: 0 };
+
+    await tx.sellerTag.createMany({ data: fresh.map((tagId) => ({ sellerUserId: params.userId, tagId })), skipDuplicates: true });
+    await notifyWatchers(tx, { sellerUserId: params.userId, tagIds: fresh });
+    return { added: fresh.length };
+  });
+}
+
 export async function setSellerTag(params: { userId: string; tagId: string; on: boolean }): Promise<void> {
   if (!params.on) {
     await db.sellerTag.deleteMany({ where: { sellerUserId: params.userId, tagId: params.tagId } });
