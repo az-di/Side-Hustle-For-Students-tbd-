@@ -64,7 +64,8 @@ describe("enqueue", () => {
     const rendered = await renderOutboxRow(db, digests[0], { id: seller.id, emailUnsubKey: "k" });
     expect(rendered?.subject).toBe("2 updates in your tags");
     expect(rendered?.text).toContain("Outbox test open 1");
-    expect(rendered?.text).not.toMatch(/\$|100|9000|gross|budget/i);
+    // Whole-word sentinels: a bare /9000/ once matched inside a random cuid.
+    expect(rendered?.text).not.toMatch(/\$|\b(100|9000|10000)\b|gross|budget/i);
   });
 });
 
