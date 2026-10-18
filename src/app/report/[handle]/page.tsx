@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { relationshipWith } from "@/modules/trust/queries";
+import { getReportContext } from "@/modules/trust/queries";
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 import { ReportForm } from "./report-form";
 
@@ -22,20 +21,9 @@ export default async function ReportPage({
   const [{ handle }, { job: jobId }, viewer] = await Promise.all([params, searchParams, getViewer()]);
   if (!viewer) redirect("/login");
 
-  const subject = await db.user.findUnique({ where: { handle }, select: { id: true, displayName: true } });
-  if (!subject || subject.id === viewer.id) notFound();
-
-  const relationship = await relationshipWith(viewer.id, subject.id);
-
-  let jobTitle: string | null = null;
-  if (jobId) {
-    const job = await db.job.findUnique({
-      where: { id: jobId },
-      select: { buyerUserId: true, sellerUserId: true, request: { select: { title: true } } },
-    });
-    const parties = job ? [job.buyerUserId, job.sellerUserId] : [];
-    if (job && parties.includes(viewer.id) && parties.includes(subject.id)) jobTitle = job.request.title;
-  }
+  const context = await getReportContext({ viewerId: viewer.id, handle, jobId });
+  if (!context) notFound();
+  const { subject, relationship, jobTitle } = context;
 
   return (
     <main className="mx-auto max-w-lg">

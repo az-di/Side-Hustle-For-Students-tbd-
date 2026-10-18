@@ -2,6 +2,23 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Module boundaries enforced by lint, plus CI [§11.5]
+
+**What changed**
+
+- The three conventions in HANDOFF §5 are now ESLint errors (`eslint.config.mjs`, built-in `no-restricted-imports`, **no new dependency**):
+  1. `src/app/**` and `src/components/**` may not import `@/lib/db`, `@/lib/tx` or `@/generated/prisma/client`. Reads go through a module's `queries.ts`, writes through `mutations.ts`.
+  2. The same files may not import `netFromGross` / `grossFromNet` / `netFromGrossOrNull` — pages receive DTOs that already carry the right figure.
+  3. `src/modules/**` and `src/lib/**` may not import `@/app/*` or `@/components/*`. Dependencies point one way: app → modules → lib.
+- Eleven places under `src/app/` (and one component) reached Prisma directly. They now go through new module files: `identity/queries.ts` (handle lookups, demo personas, seller settings), `catalog/mutations.ts` (become seller, pause, tags, profile, listings — moved out of `marketplace.actions.ts`), `email/queries.ts` + `email/mutations.ts` (settings, unsubscribe-by-token), `notifications/queries.ts` (badge counts), `trust/queries.ts#getReportContext`.
+- `npm run lint` is clean for the first time: the `Date.now()`-in-render findings in `ui.tsx` are server components rendered per request (documented and disabled per line), the set-state-in-effect in `tag-search-box.tsx` moved into the change handler, and an unused import went.
+- **CI**: `.github/workflows/ci.yml` runs lint → typecheck → unit tests → migrate + seed → integration tests → production build against a Postgres 17 service on every push and PR. Node 24, matching `nixpacks.toml`.
+
+**Not done from the original plan**
+
+- No `eslint-plugin-boundaries` / `dependency-cruiser` (would add dependencies and lockfile churn from an npm 10 machine; the built-in rule covers the three conventions). No `domain/application/ports/infra` split or repository interfaces — the module layout (`state → mutations → queries → dto`) is already the seam, and the lint rules now keep the UI on the right side of it.
+- Money arithmetic cannot be *linted* for; the rule blocks importing the converters into the UI. `request-form.tsx` keeps a local `netFromGross` copy for its live preview (client component, mirrors `lib/money.ts`), which is deliberate and commented.
+
 ## 2026-10-18 — Media uploads [§11.4]
 
 **What a user sees**

@@ -240,7 +240,11 @@ export function TagChip({ name, kind }: { name: string; kind?: "SERVICE" | "COUR
   return <Badge tone={kind === "COURSE" ? "neutral" : "brand"}>{name}</Badge>;
 }
 
+// RelativeTime and Countdown read the clock during render. They are server
+// components rendered fresh on every request, so the value is stable for the
+// lifetime of the response; the purity rule is about client re-renders.
 export function RelativeTime({ date }: { date: Date }) {
+  // eslint-disable-next-line react-hooks/purity
   const ms = Date.now() - date.getTime();
   const mins = Math.round(ms / 60_000);
   const label =
@@ -260,6 +264,7 @@ export function RelativeTime({ date }: { date: Date }) {
 
 /** Counts down to a request's deadline. Renders "Expired" once past. */
 export function Countdown({ to }: { to: Date }) {
+  // eslint-disable-next-line react-hooks/purity
   const ms = to.getTime() - Date.now();
   if (ms <= 0) return <Badge tone="neutral">Expired</Badge>;
   const hours = Math.floor(ms / 3_600_000);

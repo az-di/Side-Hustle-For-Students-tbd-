@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { formatCents } from "@/lib/money";
+import { getSellerSettings } from "@/modules/identity/queries";
 import { listPortfolio, mediaUsage } from "@/modules/media/queries";
 import { MAX_PORTFOLIO_ITEMS, formatBytes } from "@/modules/media/state";
 import { becomeSellerAction, setPausedAction } from "@/app/actions/marketplace.actions";
@@ -20,37 +20,7 @@ export default async function SellerSettingsPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
 
-  const me = await db.user.findUniqueOrThrow({
-    where: { id: viewer.id },
-    select: {
-      displayName: true,
-      bio: true,
-      venmoHandle: true,
-      sellerProfile: {
-        select: {
-          headline: true,
-          about: true,
-          isAvailable: true,
-          fixedPriceCents: true,
-          hourlyRateCents: true,
-          portfolioLinks: true,
-        },
-      },
-      sellerTags: { select: { tag: { select: { id: true, name: true, slug: true, kind: true } } } },
-      listings: {
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          fixedPriceCents: true,
-          hourlyRateCents: true,
-          turnaroundDays: true,
-          tags: { select: { tag: { select: { id: true, name: true, slug: true, kind: true } } } },
-        },
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+  const me = await getSellerSettings(viewer.id);
 
   // Not a seller yet: one field, one button.
   if (!me.sellerProfile) {

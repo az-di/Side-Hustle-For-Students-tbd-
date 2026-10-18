@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireAnyViewer, requireViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { toUserMessage } from "@/lib/errors";
 import { parseDollarsToCents } from "@/lib/money";
+import { becomeSeller, saveListing, saveSellerProfile, setSellerPaused, setSellerTag } from "@/modules/catalog/mutations";
 import {
   acceptDirectRequest,
   cancelRequest,
@@ -275,13 +275,7 @@ export async function markAllReadAction(): Promise<void> {
 
 export async function becomeSellerAction(formData: FormData): Promise<void> {
   const viewer = await requireViewer();
-  const headline = String(formData.get("headline") ?? "").trim() || null;
-
-  await db.sellerProfile.upsert({
-    where: { userId: viewer.id },
-    create: { userId: viewer.id, headline },
-    update: { headline },
-  });
+  await becomeSeller({ userId: viewer.id, headline: String(formData.get("headline") ?? "").trim() || null });
 
   revalidatePath("/settings/seller");
   redirect("/settings/seller");
@@ -289,30 +283,17 @@ export async function becomeSellerAction(formData: FormData): Promise<void> {
 
 export async function setPausedAction(formData: FormData): Promise<void> {
   const viewer = await requireViewer();
-  const paused = String(formData.get("paused")) === "true";
-
-  await db.sellerProfile.update({
-    where: { userId: viewer.id },
-    data: { isAvailable: !paused, pausedAt: paused ? new Date() : null },
-  });
-
+  await setSellerPaused({ userId: viewer.id, paused: String(formData.get("paused")) === "true" });
   revalidatePath("/settings/seller");
 }
 
 export async function toggleSellerTagAction(formData: FormData): Promise<void> {
   const viewer = await requireViewer();
-  const tagId = String(formData.get("tagId") ?? "");
-  const on = String(formData.get("on")) === "true";
-
-  if (on) {
-    await db.sellerTag.upsert({
-      where: { sellerUserId_tagId: { sellerUserId: viewer.id, tagId } },
-      create: { sellerUserId: viewer.id, tagId },
-      update: {},
-    });
-  } else {
-    await db.sellerTag.deleteMany({ where: { sellerUserId: viewer.id, tagId } });
-  }
+  await setSellerTag({
+    userId: viewer.id,
+    tagId: String(formData.get("tagId") ?? ""),
+    on: String(formData.get("on")) === "true",
+  });
 
   revalidatePath("/settings/seller");
   revalidatePath("/requests");
@@ -348,40 +329,16 @@ export async function saveSellerProfileAction(
         portfolioLinks: formData.get("portfolioLinks") ?? undefined,
       });
 
-    const links = (input.portfolioLinks ?? "")
-      .split(/[\n,]/)
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .slice(0, 10);
-
-    await db.$transaction(async (tx) => {
-      await tx.user.update({
-        where: { id: viewer.id },
-        data: {
-          displayName: input.displayName,
-          bio: input.bio || null,
-          venmoHandle: input.venmoHandle || null,
-        },
-      });
-
-      await tx.sellerProfile.upsert({
-        where: { userId: viewer.id },
-        create: {
-          userId: viewer.id,
-          headline: input.headline || null,
-          about: input.about || null,
-          fixedPriceCents: input.fixed,
-          hourlyRateCents: input.hourly,
-          portfolioLinks: links,
-        },
-        update: {
-          headline: input.headline || null,
-          about: input.about || null,
-          fixedPriceCents: input.fixed,
-          hourlyRateCents: input.hourly,
-          portfolioLinks: links,
-        },
-      });
+    await saveSellerProfile({
+      userId: viewer.id,
+      displayName: input.displayName,
+      bio: input.bio || null,
+      headline: input.headline || null,
+      about: input.about || null,
+      venmoHandle: input.venmoHandle || null,
+      fixedPriceCents: input.fixed,
+      hourlyRateCents: input.hourly,
+      portfolioLinks: (input.portfolioLinks ?? "").split(/[\n,]/),
     });
   } catch (err) {
     if (err instanceof z.ZodError) return { error: err.issues[0]?.message ?? "Check the form." };
@@ -419,47 +376,15 @@ export async function saveListingAction(
         tagIds: formData.get("tagIds") ?? "",
       });
 
-    if (input.fixed === null && input.hourly === null) {
-      return { error: "Set a flat price, an hourly rate, or both." };
-    }
-    if (input.tagIds.length === 0) return { error: "Pick at least one tag." };
-
-    await db.$transaction(async (tx) => {
-      const listing = input.listingId
-        ? await tx.listing.update({
-            where: { id: input.listingId },
-            data: {
-              title: input.title,
-              description: input.description,
-              fixedPriceCents: input.fixed,
-              hourlyRateCents: input.hourly,
-              turnaroundDays: input.turnaroundDays ?? null,
-            },
-            select: { id: true },
-          })
-        : await tx.listing.create({
-            data: {
-              sellerUserId: viewer.id,
-              title: input.title,
-              description: input.description,
-              fixedPriceCents: input.fixed,
-              hourlyRateCents: input.hourly,
-              turnaroundDays: input.turnaroundDays ?? null,
-            },
-            select: { id: true },
-          });
-
-      await tx.listingTag.deleteMany({ where: { listingId: listing.id } });
-      await tx.listingTag.createMany({
-        data: input.tagIds.map((tagId) => ({ listingId: listing.id, tagId })),
-        skipDuplicates: true,
-      });
-
-      // Publishing a listing under a tag implies being open to that tag.
-      await tx.sellerTag.createMany({
-        data: input.tagIds.map((tagId) => ({ sellerUserId: viewer.id, tagId })),
-        skipDuplicates: true,
-      });
+    await saveListing({
+      sellerUserId: viewer.id,
+      listingId: input.listingId ?? null,
+      title: input.title,
+      description: input.description,
+      fixedPriceCents: input.fixed,
+      hourlyRateCents: input.hourly,
+      turnaroundDays: input.turnaroundDays ?? null,
+      tagIds: input.tagIds,
     });
   } catch (err) {
     if (err instanceof z.ZodError) return { error: err.issues[0]?.message ?? "Check the form." };

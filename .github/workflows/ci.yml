@@ -1,0 +1,67 @@
+# Runs on every push and pull request. Mirrors HANDOFF §14 plus the
+# integration suite, against a throwaway Postgres.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hustl
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hustl?schema=public
+      SESSION_SECRET: ci-session-secret-not-for-production
+      OTP_PEPPER: ci-otp-pepper-not-for-production
+      DEMO_MODE: "0"
+      EMAIL_DRAIN_INTERVAL_MS: "0"
+      MEDIA_DIR: ./data/media
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Lint (includes the module boundary rules)
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Migrate and seed
+        run: |
+          npx prisma migrate deploy
+          npm run db:seed
+
+      - name: Integration tests
+        run: npm run test:int
+
+      - name: Production build
+        run: npm run build

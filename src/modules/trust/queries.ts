@@ -60,6 +60,29 @@ export async function relationshipWith(viewerId: string, otherUserId: string): P
   };
 }
 
+/**
+ * What the report page needs: who is being reported, whether the viewer may
+ * report them, and — when a job is named — that both people were on it.
+ */
+export async function getReportContext(params: { viewerId: string; handle: string; jobId?: string | null }) {
+  const subject = await db.user.findUnique({ where: { handle: params.handle }, select: { id: true, displayName: true } });
+  if (!subject || subject.id === params.viewerId) return null;
+
+  const relationship = await relationshipWith(params.viewerId, subject.id);
+
+  let jobTitle: string | null = null;
+  if (params.jobId) {
+    const job = await db.job.findUnique({
+      where: { id: params.jobId },
+      select: { buyerUserId: true, sellerUserId: true, request: { select: { title: true } } },
+    });
+    const parties = job ? [job.buyerUserId, job.sellerUserId] : [];
+    if (job && parties.includes(params.viewerId) && parties.includes(subject.id)) jobTitle = job.request.title;
+  }
+
+  return { subject, relationship, jobTitle };
+}
+
 export async function listBlockedUsers(blockerUserId: string) {
   const rows = await db.block.findMany({
     where: { blockerUserId },

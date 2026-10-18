@@ -2,12 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAnyViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { setEmailOptOut } from "@/modules/email/mutations";
 
 /** A suspended person may still turn email off, hence requireAnyViewer. */
 export async function setEmailOptOutAction(formData: FormData): Promise<void> {
   const viewer = await requireAnyViewer();
-  const optOut = String(formData.get("optOut")) === "true";
-  await db.user.update({ where: { id: viewer.id }, data: { emailOptOut: optOut } });
+  await setEmailOptOut({ userId: viewer.id, optOut: String(formData.get("optOut")) === "true" });
   revalidatePath("/settings/email");
 }

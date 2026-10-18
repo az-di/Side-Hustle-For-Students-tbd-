@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { env, isDemoMode } from "@/lib/env";
+import { listDemoPersonas } from "@/modules/identity/queries";
 import { demoSignInAction } from "@/app/actions/auth.actions";
-import { Avatar, Badge, Button, Card } from "@/components/ui";
+import { Avatar, Badge, Card } from "@/components/ui";
 import { LoginForm } from "./login-form";
 
 export const metadata = { title: "Sign in · HUSTL" };
@@ -12,19 +12,7 @@ export const metadata = { title: "Sign in · HUSTL" };
 export default async function LoginPage() {
   if (await getViewer()) redirect("/");
 
-  const personas = isDemoMode
-    ? await db.user.findMany({
-        where: { isDemo: true },
-        select: {
-          handle: true,
-          displayName: true,
-          uwEmail: true,
-          sellerProfile: { select: { headline: true, isAvailable: true } },
-        },
-        orderBy: [{ sellerProfile: { userId: "asc" } }, { displayName: "asc" }],
-        take: 12,
-      })
-    : [];
+  const personas = isDemoMode ? await listDemoPersonas(12) : [];
 
   return (
     <main className="mx-auto w-full max-w-md px-4 py-10">

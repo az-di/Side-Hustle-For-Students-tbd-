@@ -1,7 +1,5 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { unsubscribeToken } from "@/modules/email/templates";
+import { unsubscribeWithToken } from "@/modules/email/mutations";
 
 /**
  * One-click unsubscribe. No session needed: the link carries the user id and
@@ -9,21 +7,9 @@ import { unsubscribeToken } from "@/modules/email/templates";
  * device. GET renders a confirmation page; POST is what mail clients send for
  * RFC 8058 List-Unsubscribe-Post.
  */
-async function unsubscribe(req: Request): Promise<{ ok: boolean }> {
+function parse(req: Request): { userId: string; token: string } {
   const url = new URL(req.url);
-  const userId = url.searchParams.get("u") ?? "";
-  const token = url.searchParams.get("k") ?? "";
-  if (!userId || !token) return { ok: false };
-
-  const user = await db.user.findUnique({ where: { id: userId }, select: { emailUnsubKey: true } });
-  if (!user) return { ok: false };
-
-  const expected = Buffer.from(unsubscribeToken(user.emailUnsubKey));
-  const given = Buffer.from(token);
-  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return { ok: false };
-
-  await db.user.update({ where: { id: userId }, data: { emailOptOut: true } });
-  return { ok: true };
+  return { userId: url.searchParams.get("u") ?? "", token: url.searchParams.get("k") ?? "" };
 }
 
 function page(title: string, body: string, status: number): NextResponse {
@@ -37,13 +23,13 @@ function page(title: string, body: string, status: number): NextResponse {
 }
 
 export async function GET(req: Request) {
-  const { ok } = await unsubscribe(req);
+  const ok = await unsubscribeWithToken(parse(req));
   return ok
     ? page("You are unsubscribed", "HUSTL will not email you about requests, responses or jobs. Notifications still show in the app, and you can turn email back on in settings.", 200)
     : page("That link did not work", "It may be from an old email. Sign in and change your email preference in settings instead.", 400);
 }
 
 export async function POST(req: Request) {
-  const { ok } = await unsubscribe(req);
+  const ok = await unsubscribeWithToken(parse(req));
   return new NextResponse(null, { status: ok ? 200 : 400 });
 }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { getListingById, getTagBySlug } from "@/modules/catalog/queries";
+import { getUserByHandle } from "@/modules/identity/queries";
 import { Card, PageHeader } from "@/components/ui";
 import { RequestForm } from "./request-form";
 
@@ -19,12 +19,7 @@ export default async function NewRequestPage({
 
   const [tag, seller, listing] = await Promise.all([
     tagSlug ? getTagBySlug(tagSlug) : null,
-    sellerHandle
-      ? db.user.findUnique({
-          where: { handle: sellerHandle },
-          select: { id: true, displayName: true, sellerProfile: { select: { isAvailable: true } } },
-        })
-      : null,
+    sellerHandle ? getUserByHandle(sellerHandle) : null,
     listingId ? getListingById(listingId) : null,
   ]);
 

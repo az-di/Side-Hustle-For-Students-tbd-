@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { getEmailSettings, listRecentEmails } from "@/modules/email/queries";
 import { setEmailOptOutAction } from "@/app/actions/settings.actions";
 import { Badge, Button, Card, PageHeader } from "@/components/ui";
 
@@ -10,13 +10,7 @@ export default async function EmailSettingsPage() {
   const viewer = await getViewer();
   if (!viewer) redirect("/login");
 
-  const me = await db.user.findUniqueOrThrow({ where: { id: viewer.id }, select: { emailOptOut: true, uwEmail: true } });
-  const recent = await db.outboundEmail.findMany({
-    where: { userId: viewer.id },
-    select: { id: true, template: true, status: true, createdAt: true, sentAt: true },
-    orderBy: { createdAt: "desc" },
-    take: 10,
-  });
+  const [me, recent] = await Promise.all([getEmailSettings(viewer.id), listRecentEmails(viewer.id)]);
 
   return (
     <main className="space-y-6">

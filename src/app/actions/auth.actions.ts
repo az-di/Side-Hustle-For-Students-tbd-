@@ -10,9 +10,9 @@ import {
   startSession,
   verifyOtpAndSignIn,
 } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { env, isDemoMode } from "@/lib/env";
+import { isDemoMode } from "@/lib/env";
 import { mayEchoOtpCode, sendOtpEmail } from "@/lib/mail";
+import { findDemoPersona } from "@/modules/identity/queries";
 
 export type RequestCodeState = {
   ok: boolean;
@@ -99,11 +99,7 @@ export async function demoSignInAction(formData: FormData): Promise<void> {
   }
 
   const handle = String(formData.get("handle") ?? "");
-  const user = await db.user.findFirst({
-    where: { handle, isDemo: true, uwEmail: { endsWith: `@${env.ALLOWED_EMAIL_DOMAIN}` } },
-    select: { id: true },
-  });
-
+  const user = await findDemoPersona(handle);
   if (!user) throw new Error(`No demo persona named ${handle}`);
 
   await endSession();

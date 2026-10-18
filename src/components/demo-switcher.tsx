@@ -1,5 +1,5 @@
-import { db } from "@/lib/db";
 import { env, isDemoMode } from "@/lib/env";
+import { listDemoPersonas } from "@/modules/identity/queries";
 import { demoSignInAction } from "@/app/actions/auth.actions";
 import { Avatar, Badge } from "@/components/ui";
 
@@ -17,16 +17,7 @@ import { Avatar, Badge } from "@/components/ui";
 export async function DemoSwitcher({ currentHandle }: { currentHandle: string }) {
   if (!isDemoMode) return null;
 
-  const personas = await db.user.findMany({
-    where: { isDemo: true },
-    select: {
-      handle: true,
-      displayName: true,
-      sellerProfile: { select: { headline: true, isAvailable: true } },
-    },
-    orderBy: { displayName: "asc" },
-    take: 15,
-  });
+  const personas = await listDemoPersonas(15);
 
   if (personas.length === 0) return null;
 

@@ -31,10 +31,9 @@ export function TagSearchBox({
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
-    if (query.trim().length === 0) {
-      setHits([]);
-      return;
-    }
+    // An empty query is handled in the onChange handler (hits are cleared
+    // there), so the effect only ever schedules a fetch.
+    if (query.trim().length === 0) return;
 
     const timer = setTimeout(async () => {
       abortRef.current?.abort();
@@ -71,7 +70,10 @@ export function TagSearchBox({
     <div className="relative">
       <Input
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          if (e.target.value.trim().length === 0) setHits([]);
+        }}
         onFocus={() => hits.length > 0 && setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
         placeholder={placeholder}

@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireViewer } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { toUserMessage } from "@/lib/errors";
+import { getUserIdByHandle } from "@/modules/identity/queries";
 import { blockUser, reportUser, resolveReport, setUserStatus, unblockUser } from "@/modules/trust/mutations";
 import type { ActionState } from "./marketplace.actions";
 
@@ -17,8 +17,8 @@ import type { ActionState } from "./marketplace.actions";
 export async function blockUserAction(formData: FormData): Promise<void> {
   const viewer = await requireViewer();
   const handle = String(formData.get("handle") ?? "");
-  const target = await db.user.findUnique({ where: { handle }, select: { id: true } });
-  if (target) await blockUser({ blockerUserId: viewer.id, blockedUserId: target.id });
+  const targetId = await getUserIdByHandle(handle);
+  if (targetId) await blockUser({ blockerUserId: viewer.id, blockedUserId: targetId });
 
   revalidatePath(`/sellers/${handle}`);
   revalidatePath("/settings/safety");
@@ -29,8 +29,8 @@ export async function blockUserAction(formData: FormData): Promise<void> {
 export async function unblockUserAction(formData: FormData): Promise<void> {
   const viewer = await requireViewer();
   const handle = String(formData.get("handle") ?? "");
-  const target = await db.user.findUnique({ where: { handle }, select: { id: true } });
-  if (target) await unblockUser({ blockerUserId: viewer.id, blockedUserId: target.id });
+  const targetId = await getUserIdByHandle(handle);
+  if (targetId) await unblockUser({ blockerUserId: viewer.id, blockedUserId: targetId });
 
   revalidatePath(`/sellers/${handle}`);
   revalidatePath("/settings/safety");
@@ -58,17 +58,17 @@ export async function reportUserAction(_prev: ActionState | undefined, formData:
       block: formData.get("block") === "on",
     });
 
-    const subject = await db.user.findUnique({ where: { handle: input.handle }, select: { id: true } });
-    if (!subject) return { error: "That person could not be found." };
+    const subjectId = await getUserIdByHandle(input.handle);
+    if (!subjectId) return { error: "That person could not be found." };
 
     await reportUser({
       reporterUserId: viewer.id,
-      subjectUserId: subject.id,
+      subjectUserId: subjectId,
       kind: input.kind,
       reason: input.reason,
       jobId: input.jobId ?? null,
     });
-    if (input.block) await blockUser({ blockerUserId: viewer.id, blockedUserId: subject.id });
+    if (input.block) await blockUser({ blockerUserId: viewer.id, blockedUserId: subjectId });
   } catch (err) {
     if (err instanceof z.ZodError) return { error: err.issues[0]?.message ?? "Check the form." };
     return { error: toUserMessage(err) };

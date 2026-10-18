@@ -161,7 +161,7 @@ Each module is the same four files:
 2. **Money arithmetic happens only in `src/lib/money.ts`.**
 3. **No page receives a Prisma model.** Reads go through `queries.ts`/`dto.ts`; seller-facing mappers are named `toSeller*`.
 
-These are conventions, not lint rules — the 24-hour build skipped `eslint-plugin-boundaries`. If this project continues, adding it is an afternoon and is step 5 in [§11](#11-what-is-not-built-and-how-to-build-it).
+**These are now lint errors** (`eslint.config.mjs`, see the CHANGELOG entry for §11.5): the UI cannot import Prisma or the money converters, and modules/lib cannot import UI. `npm run lint` runs in CI.
 
 ### The shape of every mutation
 
@@ -404,9 +404,19 @@ Portfolio is links-only today. On your own box there is no 4.5 MB serverless bod
 
 </details>
 
-### 5. Module boundary enforcement
+### 5. Module boundary enforcement — DONE (lint + CI)
+
+**Built — see `eslint.config.mjs`, `.github/workflows/ci.yml` and the CHANGELOG entry.** Done with ESLint's built-in
+`no-restricted-imports` rather than `eslint-plugin-boundaries` / `dependency-cruiser`, so no dependency was added.
+The `domain/application/ports/infra` split and repository interfaces were **not** done; the existing
+`state → mutations → queries → dto` layout is the seam and the rules now keep the UI on the right side of it. If a
+separate API ever needs extracting, that split is the next step.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 Make the three conventions in [§5](#5-architecture) mechanical: `eslint-plugin-boundaries` + `dependency-cruiser` in CI, with the rule that only `modules/*/infra/**` and `src/lib/db.ts` may import `@prisma/client`. Then split each module into `domain/ application/ ports/ infra/` and introduce repository interfaces. This is what makes "we could extract a separate API later" true rather than aspirational.
+
+</details>
 
 ### 6. The watched-tag alert (completes spec item 8)
 
@@ -506,10 +516,14 @@ Set `AUTO_COMPLETE_MS=120000` if you want to show auto-confirm on stage. Run `np
 ## 14. Verification
 
 ```bash
-npm test                 # 45 tests: money math, both state machines, the leak suite
+npm run lint             # includes the module boundary rules; must be clean
 npx tsc --noEmit         # must be silent
+npm test                 # unit: money math, state machines, trust/email/media rules, the leak suite
+npm run test:int         # integration, against DATABASE_URL (safe on a seeded dev DB)
 npm run build            # must succeed — this is what Coolify runs
 ```
+
+All five run in GitHub Actions on every push (`.github/workflows/ci.yml`).
 
 To re-verify the money boundary by hand: sign in as a seller, open any request, and check the rendered page for the buyer's number.
 

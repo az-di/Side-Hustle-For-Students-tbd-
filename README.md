@@ -41,6 +41,7 @@ Seeded personas: **Alex Kim** and **Zoe Williams** (buyers), **Maya Chen** and *
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Dev server |
+| `npm run lint` | ESLint, including the module boundary rules (runs in CI) |
 | `npm test` | Unit tests — money math, the state machines, trust rules, the leak suite |
 | `npm run test:int` | Integration tests against the Postgres in `DATABASE_URL` (safe on a seeded dev DB) |
 | `npm run db:seed` | Idempotent seed; safe to re-run |
@@ -57,7 +58,7 @@ src/components/ design system
 prisma/         schema, migrations, seed
 ```
 
-Three conventions keep this portable without a build-time enforcement layer:
+Three conventions keep this portable, and `npm run lint` enforces them (see `eslint.config.mjs`):
 
 1. **Prisma is imported only inside `src/modules/*/` and `src/lib/db.ts`.** Never from `app/`.
 2. **Money arithmetic happens only in `src/lib/money.ts`.**
