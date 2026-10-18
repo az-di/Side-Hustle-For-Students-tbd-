@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 type Sync = { unreadNotifications: number; unreadThreads: number };
 
@@ -12,26 +13,29 @@ type Sync = { unreadNotifications: number; unreadThreads: number };
  * connection infrastructure, and entirely adequate at campus scale. Pauses
  * while the tab is hidden and refetches the moment it regains focus, which is
  * what makes the demo feel live when you switch between two browser windows.
+ *
+ * Also refetches on navigation. Opening a thread marks it read on the server,
+ * but this component stays mounted in the header, so without a pathname
+ * change the badge would keep the old count until the next 20s tick.
  */
 export function SyncIndicators() {
+  const pathname = usePathname();
   const [sync, setSync] = useState<Sync>({ unreadNotifications: 0, unreadThreads: 0 });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function poll() {
-      if (document.hidden) return;
-      try {
-        const res = await fetch("/api/sync", { cache: "no-store" });
-        if (!res.ok) return;
-        const data = (await res.json()) as Sync;
-        if (!cancelled) setSync(data);
-      } catch {
-        // Offline or mid-deploy: keep the last known counts rather than
-        // flashing zeros at the user.
-      }
+  const poll = useCallback(async () => {
+    if (document.hidden) return;
+    try {
+      const res = await fetch("/api/sync", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = (await res.json()) as Sync;
+      setSync(data);
+    } catch {
+      // Offline or mid-deploy: keep the last known counts rather than
+      // flashing zeros at the user.
     }
+  }, []);
 
+  useEffect(() => {
     poll();
     const timer = setInterval(poll, 20_000);
     const onVisible = () => {
@@ -41,12 +45,11 @@ export function SyncIndicators() {
     window.addEventListener("focus", onVisible);
 
     return () => {
-      cancelled = true;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, []);
+  }, [poll, pathname]);
 
   return (
     <div className="flex items-center gap-1">
