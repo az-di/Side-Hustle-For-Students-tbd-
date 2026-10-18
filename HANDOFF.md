@@ -89,7 +89,7 @@ Against the spec's 14 in-scope items:
 | 5 | Pause | ✅ Stays listed with a Paused badge, excluded from fan-out and direct requests |
 | 6 | Open and direct requests | ✅ Both, including one thread per responder and losers closed out on selection |
 | 7 | Budget and time limit on every request | ✅ Expiry derived at read time — no cron needed |
-| 8 | In-app notifications | ⚠️ **Partial.** All job/request lifecycle events work. **Missing:** the buyer alert when a seller becomes open to a watched tag |
+| 8 | In-app notifications | ⚠️ **Partial.** All job/request lifecycle events work, in-app **and by email** (outbox + daily digest). **Missing:** the buyer alert when a seller becomes open to a watched tag |
 | 9 | Tag search with type-ahead incl. course codes; filter sellers by rating | ✅ |
 | 10 | Job flow: request, accept/decline, both mark complete | ✅ Plus auto-confirm with a configurable window |
 | 11 | Messaging | ✅ Request and job threads, polled. ⚠️ No pre-request inquiry threads |
@@ -296,6 +296,8 @@ Hard-won; do not rediscover them.
 - **npm 11 blocks install scripts by default.** A fresh `npm install` will skip `esbuild` and `@prisma/engines` postinstalls, which silently breaks vitest and `prisma migrate`. Fix: `npm install-scripts approve prisma @prisma/engines esbuild unrs-resolver`, then reinstall.
 - **`create-next-app` currently scaffolds a canary** with Turbopack-only Tailwind and `cacheComponents` enabled — the latter forces `use cache` semantics on every DB read. This repo deliberately uses stable Next with Tailwind through PostCSS instead.
 - **`vitest.config.ts` must be `.mts`** or Vite loads it as CommonJS and warns on every run.
+- **Raw SQL must not compare Prisma timestamps to `now()`.** Prisma stores `DateTime` as a naive UTC timestamp; Postgres `now()` renders in the session time zone. On any box not set to UTC the comparison is off by the offset (silently, in whichever direction). Bind the clock from JS (`${new Date()}`) instead. Both existing raw statements do this now.
+- **Deleting a seller `User` can violate `request_direct_target`.** `Request.targetSellerUserId` is `ON DELETE SET NULL`, and the CHECK says a DIRECT request must have a target. There is no account-deletion feature yet; when one is built, delete or close the person's requests first. The integration test cleanup does exactly that.
 - **Vultr blocks outbound port 25** on new instances. Harmless here (Resend is an HTTPS API) but it would silently break any SMTP library — do not swap in nodemailer.
 - **Coolify's `sslip.io` hostnames are for testing only** and Let's Encrypt behaviour on them is unconfirmed. Use the real domain.
 
@@ -370,7 +372,14 @@ Account closure: a `User.status` enum (`ACTIVE | SUSPENDED | CLOSED`) checked on
 
 See [§12](#12-deploying-to-vultr). Do this before adding features if anyone else needs to see it.
 
-### 3. Email notifications
+### 3. Email notifications — DONE
+
+**Built — see `src/modules/email/` and the CHANGELOG entry.** Outbox rows in the same transaction as notifications,
+daily digest for the fan-out kind, in-process drain timer plus `POST /api/email/drain`, one-click unsubscribe with
+`List-Unsubscribe` headers, `/settings/email`. Templates are plain text + inline HTML strings rather than
+`@react-email/components` (no new dependency, no install-script dance) and are money-free by construction.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 `src/lib/mail.ts` already wraps Resend and degrades safely. What is missing is an outbox so email survives a crash, and digesting so fan-out does not blow a free tier.
 
@@ -379,6 +388,8 @@ See [§12](#12-deploying-to-vultr). Do this before adding features if anyone els
 - **Digest the fan-out kinds.** One open request in a popular tag is hundreds of emails; Resend's free tier is ~100/day. `OPEN_REQUEST_IN_TAG` and the watched-tag alert must collapse into one "3 new requests in your tags" message, max one per user per day. 1:1 events (direct request, selected, completion requested, review received) stay immediate.
 - Templates: `@react-email/components`, typed to **role-specific props** — a seller email props type must carry only net figures.
 - Needs `List-Unsubscribe` headers and an unsubscribe route using an HMAC of `User.emailUnsubKey` (the column does not exist yet; add it).
+
+</details>
 
 ### 4. Media uploads
 
@@ -452,6 +463,9 @@ SESSION_SECRET=<32+ random chars>    # changing it signs everyone out
 OTP_PEPPER=<32+ random chars>        # changing it invalidates live codes
 RESEND_API_KEY=re_…
 EMAIL_FROM="HUSTL <login@yourdomain.com>"
+APP_URL=https://hustl.yourdomain.com # links inside emails
+EMAIL_DRAIN_INTERVAL_MS=60000        # in-process outbox drain; 0 = external scheduler only
+CRON_SECRET=<32+ random chars>       # optional: enables POST /api/email/drain
 ALLOWED_EMAIL_DOMAIN=uw.edu
 DEMO_MODE=0                          # MUST be 0 — it echoes OTP codes and enables persona switching
 AUTO_COMPLETE_MS=604800000           # 7 days

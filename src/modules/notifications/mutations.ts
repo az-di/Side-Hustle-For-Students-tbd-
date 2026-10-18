@@ -2,6 +2,8 @@ import { Prisma } from "@/generated/prisma/client";
 import type { NotificationKind } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { Tx } from "@/lib/tx";
+import { enqueueForNotifications } from "@/modules/email/outbox";
+import { DIGEST_DELAY_MS, digestBucket, digestSince } from "@/modules/email/state";
 import { notBlockedSql } from "@/modules/trust/block-filter";
 
 /**
@@ -18,6 +20,10 @@ import { notBlockedSql } from "@/modules/trust/block-filter";
  * Payloads hold IDS ONLY. Never a rendered string like "New request: $100 for
  * photos": a notification row is read by whoever it belongs to, so a
  * pre-rendered money figure would leak the buyer's gross budget to sellers.
+ *
+ * Email rides along: every notification written here also queues its email
+ * (modules/email/outbox.ts) in the same transaction, so no mutation has to
+ * remember to.
  */
 
 export type NotifyInput = {
@@ -34,7 +40,9 @@ export async function notify(tx: Tx, input: NotifyInput | NotifyInput[]): Promis
   const rows = Array.isArray(input) ? input : [input];
   if (rows.length === 0) return 0;
 
-  const result = await tx.notification.createMany({
+  // createManyAndReturn + skipDuplicates returns only the rows actually
+  // inserted, which is exactly the set that owes an email.
+  const inserted = await tx.notification.createManyAndReturn({
     data: rows.map((r) => ({
       userId: r.userId,
       kind: r.kind,
@@ -45,9 +53,11 @@ export async function notify(tx: Tx, input: NotifyInput | NotifyInput[]): Promis
       threadId: r.threadId ?? null,
     })),
     skipDuplicates: true,
+    select: { id: true, userId: true, kind: true, dedupeKey: true },
   });
 
-  return result.count;
+  await enqueueForNotifications(tx, inserted);
+  return inserted.length;
 }
 
 /**
@@ -68,7 +78,11 @@ export async function fanOutOpenRequest(
 ): Promise<number> {
   if (params.tagIds.length === 0) return 0;
 
-  return tx.$executeRaw(Prisma.sql`
+  // Timestamps are bound from JS rather than `now()`: Prisma stores DateTime
+  // as naive UTC, and `now()` renders in the session time zone.
+  const now = new Date();
+
+  const notified = await tx.$executeRaw(Prisma.sql`
     INSERT INTO "Notification" ("id", "userId", "kind", "requestId", "actorUserId", "dedupeKey", "createdAt")
     SELECT
       gen_random_uuid()::text,
@@ -77,7 +91,7 @@ export async function fanOutOpenRequest(
       ${params.requestId},
       ${params.buyerUserId},
       ${"open_req:" + params.requestId},
-      now()
+      ${now}
     FROM "SellerTag" st
     JOIN "SellerProfile" sp ON sp."userId" = st."sellerUserId"
     JOIN "User" u ON u."id" = st."sellerUserId"
@@ -88,6 +102,31 @@ export async function fanOutOpenRequest(
       AND ${notBlockedSql(params.buyerUserId, Prisma.sql`st."sellerUserId"`)}
     ON CONFLICT ("userId", "dedupeKey") DO NOTHING
   `);
+
+  // One DIGEST email per recipient per day, set-based for the same reason as
+  // above. The conflict target is the dedupe key, so a second request on the
+  // same day adds nothing — the digest renders whatever is unread at send time.
+  const bucket = digestBucket(now);
+  const sendAfter = new Date(now.getTime() + DIGEST_DELAY_MS);
+  await tx.$executeRaw(Prisma.sql`
+    INSERT INTO "OutboundEmail" ("id", "userId", "template", "payload", "dedupeKey", "sendAfter", "createdAt")
+    SELECT
+      gen_random_uuid()::text,
+      n."userId",
+      'digest',
+      jsonb_build_object('since', ${digestSince(bucket).toISOString()}::text),
+      ${"digest:"} || n."userId" || ${":" + bucket},
+      ${sendAfter},
+      ${now}
+    FROM "Notification" n
+    JOIN "User" u ON u."id" = n."userId"
+    WHERE n."requestId" = ${params.requestId}
+      AND n."kind" = 'OPEN_REQUEST_IN_TAG'::"NotificationKind"
+      AND NOT u."emailOptOut"
+    ON CONFLICT ("dedupeKey") DO NOTHING
+  `);
+
+  return notified;
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<number> {

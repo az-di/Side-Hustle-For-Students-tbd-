@@ -47,6 +47,11 @@ export async function makeTag() {
 
 /** Deletes every user and tag this run created. Cascades take the rest. */
 export async function cleanup(): Promise<void> {
+  // Requests first: deleting a seller would SET NULL the target of a DIRECT
+  // request, which the request_direct_target CHECK refuses.
+  await db.request.deleteMany({
+    where: { OR: [{ buyerUserId: { in: created.userIds } }, { targetSellerUserId: { in: created.userIds } }] },
+  });
   await db.user.deleteMany({ where: { id: { in: created.userIds } } });
   await db.tag.deleteMany({ where: { id: { in: created.tagIds } } });
   created.userIds = [];

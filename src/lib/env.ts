@@ -18,6 +18,18 @@ const schema = z.object({
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default("HUSTL <login@hustl.local>"),
 
+  /** Public origin, used to build links inside emails. */
+  APP_URL: z.string().default("http://localhost:3000"),
+
+  /**
+   * How often the server process drains the email outbox. 0 disables the
+   * in-process timer (use POST /api/email/drain from an external scheduler).
+   */
+  EMAIL_DRAIN_INTERVAL_MS: z.coerce.number().int().min(0).default(60_000),
+
+  /** Bearer token for /api/email/drain. Unset = route disabled. */
+  CRON_SECRET: z.string().optional(),
+
   /** Only @uw.edu may sign up. Overridable so teammates can test locally. */
   ALLOWED_EMAIL_DOMAIN: z.string().default("uw.edu"),
 

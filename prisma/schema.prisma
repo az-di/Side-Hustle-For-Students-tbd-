@@ -37,6 +37,14 @@ model User {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
+  // Email preferences. The unsubscribe link carries an HMAC of emailUnsubKey,
+  // so a one-click unsubscribe needs no session and the key never leaves the
+  // server in the clear.
+  emailOptOut   Boolean @default(false)
+  // DB-level default so existing rows get a key when the column is added.
+  emailUnsubKey String  @unique @default(dbgenerated("gen_random_uuid()::text"))
+
+  outboundEmails OutboundEmail[]
   trust          UserTrust?
   blocksMade     Block[]  @relation("BlocksMade")
   blocksReceived Block[]  @relation("BlocksReceived")
@@ -504,4 +512,42 @@ model PlatformSetting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// ──────────────────────────────── email outbox ────────────────────────────
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED // gave up after MAX_ATTEMPTS
+  SKIPPED // recipient opted out, or nothing left to say by the time it was due
+}
+
+/// Every email leaves through this table. Rows are written in the SAME
+/// transaction as the notification they describe, so a crash between "state
+/// changed" and "email sent" loses nothing — the drain picks it up later.
+///
+/// Payloads hold IDS ONLY, like Notification rows: the template renders per
+/// recipient at send time, so a money figure can never be pre-baked into a
+/// row that might go to a seller.
+model OutboundEmail {
+  id          String      @id @default(cuid())
+  userId      String
+  template    String // key into email/templates.ts
+  payload     Json // ids only
+  /// Unique per logical email, so retries and re-run sweeps are idempotent.
+  /// Digests use `digest:{userId}:{bucket}`, which is how several fan-outs
+  /// collapse into one message.
+  dedupeKey   String      @unique
+  status      EmailStatus @default(PENDING)
+  sendAfter   DateTime    @default(now())
+  attempts    Int         @default(0)
+  lastError   String?
+  sentAt      DateTime?
+  createdAt   DateTime    @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, sendAfter]) // the drain
+  @@index([userId, createdAt(sort: Desc)])
 }

@@ -78,6 +78,10 @@ export function AppShell({ viewer, children }: { viewer: Viewer | null; children
           <Link href="/settings/safety" className="underline hover:text-ink-soft">
             Blocked people and reports
           </Link>
+          {" · "}
+          <Link href="/settings/email" className="underline hover:text-ink-soft">
+            Email
+          </Link>
           {viewer.isAdmin ? (
             <>
               {" · "}
