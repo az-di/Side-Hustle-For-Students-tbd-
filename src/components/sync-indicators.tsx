@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 type Sync = { unreadNotifications: number; unreadThreads: number };
 
@@ -22,21 +22,25 @@ export function SyncIndicators() {
   const pathname = usePathname();
   const [sync, setSync] = useState<Sync>({ unreadNotifications: 0, unreadThreads: 0 });
 
-  const poll = useCallback(async () => {
-    if (document.hidden) return;
-    try {
-      const res = await fetch("/api/sync", { cache: "no-store" });
-      if (!res.ok) return;
-      const data = (await res.json()) as Sync;
-      setSync(data);
-    } catch {
-      // Offline or mid-deploy: keep the last known counts rather than
-      // flashing zeros at the user.
-    }
-  }, []);
-
   useEffect(() => {
-    poll();
+    let cancelled = false;
+
+    async function poll() {
+      if (document.hidden) return;
+      try {
+        const res = await fetch("/api/sync", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = (await res.json()) as Sync;
+        if (!cancelled) setSync(data);
+      } catch {
+        // Offline or mid-deploy: keep the last known counts rather than
+        // flashing zeros at the user.
+      }
+    }
+
+    // Defer the first read so setState runs from a timer callback, not the
+    // effect body. The effect restarts on navigation, which is the refresh.
+    const kick = setTimeout(poll, 0);
     const timer = setInterval(poll, 20_000);
     const onVisible = () => {
       if (!document.hidden) poll();
@@ -45,11 +49,13 @@ export function SyncIndicators() {
     window.addEventListener("focus", onVisible);
 
     return () => {
+      cancelled = true;
+      clearTimeout(kick);
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, [poll, pathname]);
+  }, [pathname]);
 
   return (
     <div className="flex items-center gap-1">
