@@ -5,8 +5,9 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["src/**/*.test.ts"],
-    // Integration tests need a database; they run under `npm run test:int`.
-    exclude: ["**/node_modules/**", "**/*.int.test.ts"],
+    // Integration tests need a database (`npm run test:int`); e2e tests need a
+    // running server (`npm run test:e2e`).
+    exclude: ["**/node_modules/**", "**/*.int.test.ts", "**/*.e2e.test.ts"],
   },
   resolve: {
     alias: {

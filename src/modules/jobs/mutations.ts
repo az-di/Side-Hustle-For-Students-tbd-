@@ -40,18 +40,25 @@ async function threadHasDialogue(jobId: string): Promise<boolean> {
   return senders.length >= 2;
 }
 
-export async function markJobComplete(params: { jobId: string; actorUserId: string }): Promise<void> {
+/**
+ * The clock is injectable (`clock.now`, `clock.autoCompleteMs`) so the 7-day
+ * window is testable in milliseconds. Production callers pass nothing.
+ */
+export type JobClock = { now?: Date; autoCompleteMs?: number };
+
+export async function markJobComplete(params: { jobId: string; actorUserId: string }, clock: JobClock = {}): Promise<void> {
+  const now = clock.now ?? new Date();
   const job = await loadJob(params.jobId);
   const decision = applyJobEvent(
     job,
     "MARK_COMPLETE",
     { userId: params.actorUserId, threadHasDialogue: await threadHasDialogue(params.jobId) },
-    new Date(),
+    now,
   );
   if (!decision.ok) throw notAllowed(decision.message);
 
   const otherParty = params.actorUserId === job.buyerUserId ? job.sellerUserId : job.buyerUserId;
-  const autoCompleteAt = new Date(Date.now() + env.AUTO_COMPLETE_MS);
+  const autoCompleteAt = new Date(now.getTime() + (clock.autoCompleteMs ?? env.AUTO_COMPLETE_MS));
 
   await db.$transaction(async (tx) => {
     const updated = await tx.job.updateMany({
@@ -173,9 +180,9 @@ export async function rejectJobCompletion(params: { jobId: string; actorUserId: 
  * `completionSource = AUTO` and a separate counter keep it honest: an
  * auto-completed job does not inflate the public completed-job count.
  */
-export async function materializeAutoComplete(jobId: string): Promise<boolean> {
+export async function materializeAutoComplete(jobId: string, now: Date = new Date()): Promise<boolean> {
   const job = await loadJob(jobId);
-  if (!isAutoCompleteDue(job, new Date())) return false;
+  if (!isAutoCompleteDue(job, now)) return false;
 
   return db.$transaction(async (tx) => {
     const updated = await tx.job.updateMany({

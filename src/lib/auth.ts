@@ -1,9 +1,9 @@
-import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { db } from "./db";
 import { env } from "./env";
+import { SESSION_COOKIE, hashSessionToken, newSessionToken } from "./session-token";
 
-const SESSION_COOKIE = "hustl_session";
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const OTP_MAX_ATTEMPTS = 5;
@@ -160,13 +160,11 @@ export async function verifyOtpAndSignIn(rawEmail: string, rawCode: string): Pro
 
 // ───────────────────────────────── sessions ────────────────────────────────
 
-function hashToken(token: string): string {
-  return createHash("sha256").update(`${token}${env.SESSION_SECRET}`).digest("hex");
-}
+const hashToken = hashSessionToken;
 
 /** Creates a session row and sets the cookie. The raw token is never stored. */
 export async function startSession(userId: string): Promise<void> {
-  const token = randomBytes(32).toString("hex");
+  const token = newSessionToken();
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
   await db.session.create({ data: { userId, tokenHash: hashToken(token), expiresAt } });

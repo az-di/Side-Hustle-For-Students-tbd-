@@ -2,6 +2,19 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Tests: concurrency, the full loop, and the money-leak e2e [§11.10]
+
+**What was added**
+
+- **The test that protects the pitch** — `src/e2e/money-leak.e2e.test.ts`, run by `npm run test:e2e` against a running server (`E2E_BASE_URL`). A buyer sets a $123.45 ceiling; every seller-facing page (home, requests, open request, direct request, job, both threads, inbox, notifications, search) is fetched over HTTP as the seller and the HTML must not contain `$123.45`, `12345` or `gross`; the seller's pages must show `$111.10`; the buyer's pages must show both. Distinctive figures, so an id or timestamp can neither trip nor mask it. No browser: the pages are server-rendered, so a session cookie is enough. **CI starts `next start` after the build and runs it.**
+- **Concurrency against real Postgres** — `requests/concurrency.int.test.ts`: six simultaneous picks across three responders produce exactly one winner, one job, one `SELECTED` and two `SUPERSEDED`; a seller double-submitting a response gets one row; the fan-out skips paused sellers and the buyer. `jobs/loop.int.test.ts`: the whole loop (request → accept → chat → mark → confirm → review) with the dialogue guard, the other-party rule, double-click on confirm, double review, and the seller's DTOs free of the gross figure.
+- **An injectable clock** — `markJobComplete(params, { now, autoCompleteMs })` and `materializeAutoComplete(jobId, now)`. The 7-day auto-confirm is tested in milliseconds: not due at 119 s, due at 120 s, idempotent at 121 s, `completionSource = AUTO`, `autoCompletedCount` up and `completedJobCount` untouched, still reviewable.
+- `lib/session-token.ts` holds the session hashing so tests and scripts can mint a session without importing `next/headers`; `test/factories.ts#signInAs()` returns the Cookie header.
+
+**Deviations from the plan** — no `@testcontainers/postgresql` (CI has a Postgres service; locally you have one) and no Playwright (would add a dependency and the lockfile churn noted in §11.5; the HTTP approach covers the leak assertion exactly). A `ClockPort` interface was not introduced; two optional parameters do the same job.
+
+**Totals** — `npm test` 86, `npm run test:int` 58 (+6), `npm run test:e2e` 13.
+
 ## 2026-10-18 — Rate limiting [§11.11]
 
 **What it stops**

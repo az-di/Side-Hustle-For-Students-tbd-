@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { db } from "@/lib/db";
+import { SESSION_COOKIE, hashSessionToken, newSessionToken } from "@/lib/session-token";
 
 /**
  * Row factories for integration tests. Everything is tagged with a run id so
@@ -43,6 +44,18 @@ export async function makeTag() {
   });
   created.tagIds.push(tag.id);
   return tag;
+}
+
+/**
+ * Mints a session for a user and returns the Cookie header that presents it,
+ * so an HTTP test can fetch pages as that person without the OTP dance.
+ */
+export async function signInAs(userId: string): Promise<string> {
+  const token = newSessionToken();
+  await db.session.create({
+    data: { userId, tokenHash: hashSessionToken(token), expiresAt: new Date(Date.now() + 60 * 60 * 1000) },
+  });
+  return `${SESSION_COOKIE}=${token}`;
 }
 
 /** Deletes every user and tag this run created. Cascades take the rest. */

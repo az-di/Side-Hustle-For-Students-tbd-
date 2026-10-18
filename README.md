@@ -44,6 +44,7 @@ Seeded personas: **Alex Kim** and **Zoe Williams** (buyers), **Maya Chen** and *
 | `npm run lint` | ESLint, including the module boundary rules (runs in CI) |
 | `npm test` | Unit tests — money math, the state machines, trust rules, the leak suite |
 | `npm run test:int` | Integration tests against the Postgres in `DATABASE_URL` (safe on a seeded dev DB) |
+| `npm run test:e2e` | Money-leak end-to-end test over HTTP; needs a running server (`E2E_BASE_URL`) |
 | `npm run db:seed` | Idempotent seed; safe to re-run |
 | `npm run db:reset` | Drop, re-migrate, re-seed |
 | `npm run db:studio` | Prisma Studio — escape hatch; the admin console is `/admin` (`User.isAdmin`) |

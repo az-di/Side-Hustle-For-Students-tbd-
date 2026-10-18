@@ -465,7 +465,14 @@ Prisma Studio covers it for now. When it does not: tag CRUD with synonym editing
 
 20 courses are seeded. A scraper against UW's public catalog producing a committed JSON would give full coverage, at the cost of thousands of zero-seller tags drowning the 15 real service tags in search. If you do it: keep courses grouped separately in results (already done), keep them out of the browse-all grid (already done), and add a subject bulk-select ("all MATH 1xx") in the seller tag editor.
 
-### 10. More tests
+### 10. More tests — DONE
+
+**Built — see the CHANGELOG entry.** Integration tests against real Postgres for the races (one winner on
+concurrent `selectResponse`, double mark / confirm / review, fan-out with paused sellers), the full loop at the module
+level, an injectable clock for auto-confirm, and the money-leak e2e over HTTP (`npm run test:e2e`, also in CI). No
+testcontainers, no Playwright — see the CHANGELOG for why.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 Current coverage is the money boundary and both state machines. Highest-value additions, in order:
 
@@ -474,6 +481,8 @@ Current coverage is the money boundary and both state machines. Highest-value ad
 3. A happy-path e2e for the whole loop.
 
 Use a `ClockPort`/`FakeClock` so the 7-day window is testable in milliseconds — today `AUTO_COMPLETE_MS` is read directly from env in `markJobComplete`.
+
+</details>
 
 ### 11. Rate limiting — DONE
 
@@ -556,9 +565,10 @@ npx tsc --noEmit         # must be silent
 npm test                 # unit: money math, state machines, trust/email/media rules, the leak suite
 npm run test:int         # integration, against DATABASE_URL (safe on a seeded dev DB)
 npm run build            # must succeed — this is what Coolify runs
+npm run test:e2e         # money-leak e2e over HTTP; needs a running server (E2E_BASE_URL, default :3000)
 ```
 
-All five run in GitHub Actions on every push (`.github/workflows/ci.yml`).
+All of these run in GitHub Actions on every push (`.github/workflows/ci.yml`); CI starts `next start` for the e2e step.
 
 To re-verify the money boundary by hand: sign in as a seller, open any request, and check the rendered page for the buyer's number.
 

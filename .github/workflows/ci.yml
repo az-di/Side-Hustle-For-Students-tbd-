@@ -65,3 +65,11 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+      - name: Money-leak e2e against the production server
+        run: |
+          npm start -- -p 3000 > server.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/ > /dev/null && break; sleep 1; done
+          npm run test:e2e
+        env:
+          E2E_BASE_URL: http://localhost:3000
