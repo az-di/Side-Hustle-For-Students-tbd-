@@ -7,6 +7,7 @@ import { listPortfolio } from "@/modules/media/queries";
 import { relationshipWith } from "@/modules/trust/queries";
 import { PortfolioGrid } from "@/components/portfolio-grid";
 import { SafetyMenu } from "@/components/safety-menu";
+import { MessageButton } from "./message-button";
 import {
   Avatar,
   Badge,
@@ -91,6 +92,7 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
           <ButtonLink href={`/requests/new?seller=${seller.handle}`} size="sm">
             {profile.isAvailable ? "Request from them" : "Paused — not taking requests"}
           </ButtonLink>
+          {viewer ? <MessageButton handle={seller.handle} /> : null}
           {relationship ? (
             <SafetyMenu handle={seller.handle} blockedByMe={false} canReport={relationship.canReport} />
           ) : null}

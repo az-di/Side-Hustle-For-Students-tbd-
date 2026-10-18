@@ -368,6 +368,7 @@ model Thread {
   requestId         String?
   requestResponseId String?    @unique // OPEN requests get one thread per responder
   jobId             String?    @unique
+  inquiryKey        String?    @unique // INQUIRY: "{buyerId}:{sellerId}", one per pair
   lastMessageAt     DateTime   @default(now())
   lastReadBuyerAt   DateTime?
   lastReadSellerAt  DateTime?

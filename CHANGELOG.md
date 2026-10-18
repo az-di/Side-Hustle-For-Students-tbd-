@@ -2,6 +2,21 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Pre-request inquiry threads [§11.7]
+
+**What a user sees**
+
+- A **Message** button on every seller profile opens a conversation with them before any request exists ("are you free on the 7th?"). One thread per buyer/seller pair; pressing it again returns to the same thread. The thread header offers **Request from them** so the inquiry turns into a request in one tap.
+- A buyer can start at most **5 new** conversations a day. Returning to an existing one never counts.
+
+**How it works**
+
+- `Thread.inquiryKey` (`"{buyerId}:{sellerId}"`, unique) is the idempotency key the handoff described — it was in the plan but not actually in the schema, so migration `20261018110000_inquiry_key` adds it.
+- `messaging/state.ts` holds the pure rules (`canOpenInquiry`, `inquiryKey`, the daily cap); `messaging/mutations.ts#openInquiry()` applies them plus `assertCanReach()` (blocks, suspension) and creates the thread with a system message.
+- Inquiry threads use the ordinary message path, inbox listing, unread badges and `MESSAGE_RECEIVED` emails. They are not job threads, so the completion-handshake dialogue guard is unaffected.
+
+**Tests** — `npm test` 81 (+5), `npm run test:int` 38 (+4): one thread per pair and idempotent re-open; messages both ways and both inboxes; self / non-seller / blocked refused; the daily cap applies to new threads only.
+
 ## 2026-10-18 — Watched-tag alerts [§11.6 — completes spec item 8]
 
 **What a user sees**

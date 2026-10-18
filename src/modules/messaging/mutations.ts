@@ -2,12 +2,51 @@ import { db } from "@/lib/db";
 import { invalid, notAllowed, notFound } from "@/lib/errors";
 import { notify } from "@/modules/notifications/mutations";
 import { assertCanReach } from "@/modules/trust/mutations";
-
-const MAX_MESSAGE_LENGTH = 4_000;
+import { MAX_MESSAGE_LENGTH, canOpenInquiry, inquiryKey } from "./state";
 
 /**
- * Messaging is thread-scoped: a thread always belongs to a request, a response
- * or a job, so there is no way to cold-message a stranger.
+ * A buyer opens (or returns to) their one inquiry thread with a seller.
+ * Idempotent: the unique inquiryKey means a double-click or a second visit
+ * lands in the same conversation. Only NEW threads count against the daily
+ * limit.
+ */
+export async function openInquiry(params: { buyerUserId: string; sellerUserId: string }): Promise<{ threadId: string; created: boolean }> {
+  const key = inquiryKey(params.buyerUserId, params.sellerUserId);
+
+  const existing = await db.thread.findUnique({ where: { inquiryKey: key }, select: { id: true } });
+  if (existing) return { threadId: existing.id, created: false };
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const [seller, openedToday] = await Promise.all([
+    db.sellerProfile.findUnique({ where: { userId: params.sellerUserId }, select: { userId: true } }),
+    db.thread.count({ where: { kind: "INQUIRY", buyerUserId: params.buyerUserId, createdAt: { gte: since } } }),
+  ]);
+
+  const decision = canOpenInquiry({
+    isSelf: params.buyerUserId === params.sellerUserId,
+    sellerExists: seller !== null,
+    openedToday,
+  });
+  if (!decision.ok) throw notAllowed(decision.message);
+  await assertCanReach(params.buyerUserId, params.sellerUserId);
+
+  const thread = await db.thread.create({
+    data: {
+      kind: "INQUIRY",
+      buyerUserId: params.buyerUserId,
+      sellerUserId: params.sellerUserId,
+      inquiryKey: key,
+      messages: { create: { systemKind: "REQUEST_CREATED", body: "Conversation started — ask away. Requests are made from their profile." } },
+    },
+    select: { id: true },
+  });
+  return { threadId: thread.id, created: true };
+}
+
+/**
+ * Messaging is thread-scoped: a thread always belongs to a request, a response,
+ * a job, or a buyer-opened inquiry, so there is no way to cold-message a
+ * stranger beyond the rate-limited inquiry above.
  */
 export async function sendMessage(params: {
   threadId: string;

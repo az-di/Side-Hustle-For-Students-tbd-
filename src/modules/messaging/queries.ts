@@ -35,7 +35,7 @@ export async function listThreadsForUser(userId: string) {
     const lastRead = isBuyer ? row.lastReadBuyerAt : row.lastReadSellerAt;
     return {
       id: row.id,
-      title: row.request?.title ?? "Conversation",
+      title: row.request?.title ?? (row.kind === "INQUIRY" ? "Inquiry" : "Conversation"),
       counterparty: isBuyer ? row.seller : row.buyer,
       role: isBuyer ? ("BUYER" as const) : ("SELLER" as const),
       lastMessage: row.messages[0]?.body ?? null,
@@ -84,9 +84,10 @@ export async function getThreadForViewer(threadId: string, viewerId: string) {
 
   return {
     id: row.id,
+    kind: row.kind,
     role: isBuyer ? ("BUYER" as const) : ("SELLER" as const),
     counterparty: isBuyer ? row.seller : row.buyer,
-    title: row.request?.title ?? "Conversation",
+    title: row.request?.title ?? (row.kind === "INQUIRY" ? "Inquiry" : "Conversation"),
     requestId: row.request?.id ?? null,
     jobId: row.jobId,
     /** Losing responders can read the thread but not post into it. */

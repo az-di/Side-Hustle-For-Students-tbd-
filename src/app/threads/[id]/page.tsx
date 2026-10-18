@@ -52,6 +52,10 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
           <ButtonLink href={`/requests/${thread.requestId}`} size="sm" variant="secondary">
             Request
           </ButtonLink>
+        ) : thread.kind === "INQUIRY" && thread.role === "BUYER" ? (
+          <ButtonLink href={`/requests/new?seller=${thread.counterparty.handle}`} size="sm">
+            Request from them
+          </ButtonLink>
         ) : null}
       </div>
 

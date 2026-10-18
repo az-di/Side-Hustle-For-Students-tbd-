@@ -92,7 +92,7 @@ Against the spec's 14 in-scope items:
 | 8 | In-app notifications | ✅ All job/request lifecycle events, in-app **and by email** (outbox + daily digest), plus the watched-tag alert with `/settings/watched-tags` |
 | 9 | Tag search with type-ahead incl. course codes; filter sellers by rating | ✅ |
 | 10 | Job flow: request, accept/decline, both mark complete | ✅ Plus auto-confirm with a configurable window |
-| 11 | Messaging | ✅ Request and job threads, polled. ⚠️ No pre-request inquiry threads |
+| 11 | Messaging | ✅ Request, job and pre-request inquiry threads (one per pair, 5 new/day), polled |
 | 12 | Reviews, buyers only, after completion | ✅ Rating recomputed transactionally |
 | 13 | Buyer accountability (reports → hidden rating → closure) | ✅ Weighted reports, hidden `UserTrust` standing, auto-suspend at a tunable threshold, admin queue. See CHANGELOG |
 | 14 | Reporting and blocking | ✅ Mutual, silent blocks enforced in point actions **and** every feed; integration-tested in both directions |
@@ -435,9 +435,18 @@ window, the 200-watcher cap, and the off switch at `/settings/watched-tags`.
 
 </details>
 
-### 7. Pre-request inquiry threads
+### 7. Pre-request inquiry threads — DONE
+
+**Built — see `messaging/state.ts`, `openInquiry()` and the CHANGELOG entry.** Note: `inquiryKey` was described as
+already in the schema but only the `INQUIRY` enum value was; the column arrived with migration
+`20261018110000_inquiry_key`. Entry point is the **Message** button on a seller profile; the cap is 5 new
+conversations per buyer per day.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 A buyer may open **one** rate-limited thread per seller before requesting. `Thread.kind = INQUIRY` and `inquiryKey = "{buyerId}:{sellerId}"` unique already exist in the schema — only the entry point and the rate limit are missing.
+
+</details>
 
 ### 8. Admin console
 

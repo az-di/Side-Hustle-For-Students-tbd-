@@ -23,7 +23,8 @@ import {
   markJobComplete,
   rejectJobCompletion,
 } from "@/modules/jobs/mutations";
-import { markThreadRead, sendMessage } from "@/modules/messaging/mutations";
+import { getUserIdByHandle } from "@/modules/identity/queries";
+import { markThreadRead, openInquiry, sendMessage } from "@/modules/messaging/mutations";
 import { markAllNotificationsRead } from "@/modules/notifications/mutations";
 
 /**
@@ -258,6 +259,23 @@ export async function sendMessageAction(
 
   revalidatePath(`/threads/${threadId}`);
   return { ok: true };
+}
+
+/** "Message" on a seller profile: opens or returns to the one inquiry thread with them. */
+export async function openInquiryAction(_prev: ActionState | undefined, formData: FormData): Promise<ActionState> {
+  const viewer = await requireViewer();
+  const sellerUserId = await getUserIdByHandle(String(formData.get("handle") ?? ""));
+  if (!sellerUserId) return { error: "That person could not be found." };
+
+  let threadId: string;
+  try {
+    ({ threadId } = await openInquiry({ buyerUserId: viewer.id, sellerUserId }));
+  } catch (err) {
+    return { error: toUserMessage(err) };
+  }
+
+  revalidatePath("/threads");
+  redirect(`/threads/${threadId}`);
 }
 
 export async function markThreadReadAction(threadId: string): Promise<void> {
