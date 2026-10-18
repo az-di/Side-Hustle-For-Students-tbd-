@@ -62,7 +62,7 @@ describe("enqueue", () => {
 
     // And the digest renders BOTH titles, with no money anywhere.
     const rendered = await renderOutboxRow(db, digests[0], { id: seller.id, emailUnsubKey: "k" });
-    expect(rendered?.subject).toBe("2 new requests in your tags");
+    expect(rendered?.subject).toBe("2 updates in your tags");
     expect(rendered?.text).toContain("Outbox test open 1");
     expect(rendered?.text).not.toMatch(/\$|100|9000|gross|budget/i);
   });

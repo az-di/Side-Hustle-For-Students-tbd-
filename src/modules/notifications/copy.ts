@@ -9,25 +9,52 @@ import type { NotificationKind } from "@/generated/prisma/enums";
  * the tag. Nothing here shows an amount at all, which is also what makes the
  * same copy safe to reuse in email.
  */
-export const NOTIFICATION_COPY: Record<NotificationKind, (actor: string, title: string) => string> = {
-  DIRECT_REQUEST_RECEIVED: (actor) => `${actor} asked you directly`,
-  OPEN_REQUEST_IN_TAG: (_actor, title) => `New request in your tags: ${title}`,
-  RESPONSE_RECEIVED: (actor) => `${actor} responded to your request`,
-  RESPONSE_SELECTED: (actor) => `${actor} picked you — the job is on`,
-  RESPONSE_NOT_SELECTED: (_actor, title) => `Not picked for ${title}`,
-  REQUEST_DECLINED: (actor) => `${actor} declined your request`,
-  REQUEST_CANCELLED: (actor) => `${actor} cancelled their request`,
-  REQUEST_EXPIRED: (_actor, title) => `Your request expired: ${title}`,
-  JOB_STARTED: (actor) => `${actor} accepted — the job has started`,
-  COMPLETION_REQUESTED: (actor) => `${actor} marked the job complete — confirm it`,
-  JOB_COMPLETED: (_actor, title) => `Job complete: ${title}`,
-  JOB_AUTO_COMPLETED: (_actor, title) => `Auto-confirmed after the waiting period: ${title}`,
-  JOB_CANCELLED: (actor) => `${actor} cancelled the job`,
-  REVIEW_RECEIVED: (actor) => `${actor} left you a review`,
-  MESSAGE_RECEIVED: (actor) => `${actor} sent you a message`,
+
+export type NotificationContext = { actor: string; title: string; tagName: string };
+
+export const NOTIFICATION_COPY: Record<NotificationKind, (c: NotificationContext) => string> = {
+  DIRECT_REQUEST_RECEIVED: (c) => `${c.actor} asked you directly`,
+  OPEN_REQUEST_IN_TAG: (c) => `New request in your tags: ${c.title}`,
+  RESPONSE_RECEIVED: (c) => `${c.actor} responded to your request`,
+  RESPONSE_SELECTED: (c) => `${c.actor} picked you — the job is on`,
+  RESPONSE_NOT_SELECTED: (c) => `Not picked for ${c.title}`,
+  REQUEST_DECLINED: (c) => `${c.actor} declined your request`,
+  REQUEST_CANCELLED: (c) => `${c.actor} cancelled their request`,
+  REQUEST_EXPIRED: (c) => `Your request expired: ${c.title}`,
+  JOB_STARTED: (c) => `${c.actor} accepted — the job has started`,
+  COMPLETION_REQUESTED: (c) => `${c.actor} marked the job complete — confirm it`,
+  JOB_COMPLETED: (c) => `Job complete: ${c.title}`,
+  JOB_AUTO_COMPLETED: (c) => `Auto-confirmed after the waiting period: ${c.title}`,
+  JOB_CANCELLED: (c) => `${c.actor} cancelled the job`,
+  REVIEW_RECEIVED: (c) => `${c.actor} left you a review`,
+  MESSAGE_RECEIVED: (c) => `${c.actor} sent you a message`,
+  SELLER_OPEN_TO_TAG: (c) => `${c.actor} is now open to ${c.tagName} — you asked for that recently`,
 };
 
-/** Where a notification links to. Jobs win over threads win over requests. */
-export function notificationHref(n: { jobId: string | null; threadId: string | null; requestId: string | null }): string {
-  return n.jobId ? `/jobs/${n.jobId}` : n.threadId ? `/threads/${n.threadId}` : n.requestId ? `/requests/${n.requestId}` : "/";
+/** The strings a row needs, from its relations. Both consumers use this so the fallbacks agree. */
+export function notificationContext(n: {
+  actor: { displayName: string } | null;
+  request: { title: string } | null;
+  job?: { request: { title: string } } | null;
+  tag: { name: string } | null;
+}): NotificationContext {
+  return {
+    actor: n.actor?.displayName ?? "Someone",
+    title: n.request?.title ?? n.job?.request.title ?? "a request",
+    tagName: n.tag?.name ?? "a tag",
+  };
+}
+
+/** Where a notification links to. Jobs win over threads win over requests; tag alerts go to search. */
+export function notificationHref(n: {
+  jobId: string | null;
+  threadId: string | null;
+  requestId: string | null;
+  tag?: { slug: string } | null;
+}): string {
+  if (n.jobId) return `/jobs/${n.jobId}`;
+  if (n.threadId) return `/threads/${n.threadId}`;
+  if (n.requestId) return `/requests/${n.requestId}`;
+  if (n.tag) return `/search?tag=${n.tag.slug}`;
+  return "/";
 }

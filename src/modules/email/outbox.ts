@@ -2,7 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mail";
 import type { Tx } from "@/lib/tx";
-import { digestDedupeKey, digestSince, immediateDedupeKey, nextAttemptAt, planFor } from "./state";
+import { DIGEST_DELAY_MS, digestBucket, digestDedupeKey, digestSince, immediateDedupeKey, nextAttemptAt, planFor } from "./state";
 import { renderOutboxRow, unsubscribeUrl } from "./templates";
 
 /**
@@ -69,6 +69,37 @@ export async function enqueueForNotifications(
     }
   }
   return enqueueEmail(tx, rows);
+}
+
+/**
+ * The set-based twin of enqueueForNotifications, for notifications written by
+ * a raw INSERT … SELECT (the open-request fan-out, the watched-tag alert):
+ * one DIGEST row per recipient of `notificationDedupeKey`, per day. The
+ * conflict target is the digest key, so a second event on the same day adds
+ * nothing — the digest renders whatever is unread at send time.
+ *
+ * Timestamps are bound from JS, never `now()`: Prisma stores DateTime as naive
+ * UTC and `now()` renders in the session time zone.
+ */
+export async function enqueueDigestsForNotificationKey(tx: Tx, notificationDedupeKey: string, now = new Date()): Promise<number> {
+  const bucket = digestBucket(now);
+  const sendAfter = new Date(now.getTime() + DIGEST_DELAY_MS);
+  return tx.$executeRaw(Prisma.sql`
+    INSERT INTO "OutboundEmail" ("id", "userId", "template", "payload", "dedupeKey", "sendAfter", "createdAt")
+    SELECT
+      gen_random_uuid()::text,
+      n."userId",
+      'digest',
+      jsonb_build_object('since', ${digestSince(bucket).toISOString()}::text),
+      ${"digest:"} || n."userId" || ${":" + bucket},
+      ${sendAfter},
+      ${now}
+    FROM "Notification" n
+    JOIN "User" u ON u."id" = n."userId"
+    WHERE n."dedupeKey" = ${notificationDedupeKey}
+      AND NOT u."emailOptOut"
+    ON CONFLICT ("dedupeKey") DO NOTHING
+  `);
 }
 
 type Claimed = { id: string; userId: string; template: string; payload: unknown; attempts: number };

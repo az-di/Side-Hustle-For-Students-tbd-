@@ -2,8 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import type { NotificationKind } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { Tx } from "@/lib/tx";
-import { enqueueForNotifications } from "@/modules/email/outbox";
-import { DIGEST_DELAY_MS, digestBucket, digestSince } from "@/modules/email/state";
+import { enqueueDigestsForNotificationKey, enqueueForNotifications } from "@/modules/email/outbox";
 import { notBlockedSql } from "@/modules/trust/block-filter";
 
 /**
@@ -103,28 +102,8 @@ export async function fanOutOpenRequest(
     ON CONFLICT ("userId", "dedupeKey") DO NOTHING
   `);
 
-  // One DIGEST email per recipient per day, set-based for the same reason as
-  // above. The conflict target is the dedupe key, so a second request on the
-  // same day adds nothing — the digest renders whatever is unread at send time.
-  const bucket = digestBucket(now);
-  const sendAfter = new Date(now.getTime() + DIGEST_DELAY_MS);
-  await tx.$executeRaw(Prisma.sql`
-    INSERT INTO "OutboundEmail" ("id", "userId", "template", "payload", "dedupeKey", "sendAfter", "createdAt")
-    SELECT
-      gen_random_uuid()::text,
-      n."userId",
-      'digest',
-      jsonb_build_object('since', ${digestSince(bucket).toISOString()}::text),
-      ${"digest:"} || n."userId" || ${":" + bucket},
-      ${sendAfter},
-      ${now}
-    FROM "Notification" n
-    JOIN "User" u ON u."id" = n."userId"
-    WHERE n."requestId" = ${params.requestId}
-      AND n."kind" = 'OPEN_REQUEST_IN_TAG'::"NotificationKind"
-      AND NOT u."emailOptOut"
-    ON CONFLICT ("dedupeKey") DO NOTHING
-  `);
+  // One DIGEST email per recipient per day, set-based for the same reason.
+  if (notified > 0) await enqueueDigestsForNotificationKey(tx, "open_req:" + params.requestId, now);
 
   return notified;
 }

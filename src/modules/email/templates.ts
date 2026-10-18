@@ -1,7 +1,8 @@
 import { createHmac } from "node:crypto";
 import { env } from "@/lib/env";
 import type { Tx } from "@/lib/tx";
-import { NOTIFICATION_COPY, notificationHref } from "@/modules/notifications/copy";
+import { NOTIFICATION_COPY, notificationContext, notificationHref } from "@/modules/notifications/copy";
+import { DIGEST_KINDS } from "./state";
 
 /**
  * Email templates.
@@ -72,9 +73,9 @@ export function renderNotification(props: NotificationProps, unsubscribe: string
 export function renderDigest(props: DigestProps, unsubscribe: string): RenderedEmail {
   const n = props.count;
   return layout({
-    heading: `${n} new request${n === 1 ? "" : "s"} in your tags`,
+    heading: `${n} update${n === 1 ? "" : "s"} in your tags`,
     body: props.titles.slice(0, 5).map((t) => `• ${t}`).concat(n > 5 ? [`…and ${n - 5} more`] : []),
-    cta: { label: "See open requests", href: `${env.APP_URL}${props.href}` },
+    cta: { label: "Open HUSTL", href: `${env.APP_URL}${props.href}` },
     unsubscribe,
   });
 }
@@ -107,27 +108,30 @@ export async function renderOutboxRow(
         actor: { select: { displayName: true } },
         request: { select: { title: true } },
         job: { select: { request: { select: { title: true } } } },
+        tag: { select: { name: true, slug: true } },
       },
     });
     if (!n) return null;
-    const title = n.request?.title ?? n.job?.request.title ?? "a request";
-    return renderNotification(
-      { line: NOTIFICATION_COPY[n.kind](n.actor?.displayName ?? "Someone", title), title, href: notificationHref(n) },
-      unsubscribe,
-    );
+    const line = NOTIFICATION_COPY[n.kind](notificationContext(n));
+    return renderNotification({ line, title: notificationContext(n).title, href: notificationHref(n) }, unsubscribe);
   }
 
   if (row.template === "digest") {
     const since = new Date(String(payload.since ?? new Date(0).toISOString()));
     const rows = await tx.notification.findMany({
-      where: { userId: row.userId, kind: "OPEN_REQUEST_IN_TAG", createdAt: { gte: since }, readAt: null },
-      select: { request: { select: { title: true } } },
+      where: { userId: row.userId, kind: { in: [...DIGEST_KINDS] }, createdAt: { gte: since }, readAt: null },
+      select: {
+        kind: true,
+        actor: { select: { displayName: true } },
+        request: { select: { title: true } },
+        tag: { select: { name: true, slug: true } },
+      },
       orderBy: { createdAt: "desc" },
       take: 50,
     });
     if (rows.length === 0) return null; // they already saw them in-app
     return renderDigest(
-      { count: rows.length, titles: rows.map((r) => r.request?.title ?? "a request"), href: "/requests" },
+      { count: rows.length, titles: rows.map((r) => NOTIFICATION_COPY[r.kind](notificationContext(r))), href: "/notifications" },
       unsubscribe,
     );
   }

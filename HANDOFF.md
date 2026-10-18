@@ -89,7 +89,7 @@ Against the spec's 14 in-scope items:
 | 5 | Pause | ✅ Stays listed with a Paused badge, excluded from fan-out and direct requests |
 | 6 | Open and direct requests | ✅ Both, including one thread per responder and losers closed out on selection |
 | 7 | Budget and time limit on every request | ✅ Expiry derived at read time — no cron needed |
-| 8 | In-app notifications | ⚠️ **Partial.** All job/request lifecycle events work, in-app **and by email** (outbox + daily digest). **Missing:** the buyer alert when a seller becomes open to a watched tag |
+| 8 | In-app notifications | ✅ All job/request lifecycle events, in-app **and by email** (outbox + daily digest), plus the watched-tag alert with `/settings/watched-tags` |
 | 9 | Tag search with type-ahead incl. course codes; filter sellers by rating | ✅ |
 | 10 | Job flow: request, accept/decline, both mark complete | ✅ Plus auto-confirm with a configurable window |
 | 11 | Messaging | ✅ Request and job threads, polled. ⚠️ No pre-request inquiry threads |
@@ -418,7 +418,13 @@ Make the three conventions in [§5](#5-architecture) mechanical: `eslint-plugin-
 
 </details>
 
-### 6. The watched-tag alert (completes spec item 8)
+### 6. The watched-tag alert — DONE (completes spec item 8)
+
+**Built — see `src/modules/interests/` and the CHANGELOG entry.** Exactly the design below: `BuyerTagInterest`
+upserted on every request, three triggers funnelled through `notifyWatchers()`, the monthly dedupe key, the 90-day
+window, the 200-watcher cap, and the off switch at `/settings/watched-tags`.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 "A buyer is notified when a seller becomes open to a tag they requested" needs state the request lifecycle otherwise throws away:
 
@@ -426,6 +432,8 @@ Make the three conventions in [§5](#5-architecture) mechanical: `eslint-plugin-
 - Trigger it from three places, all funnelled through one function: seller adds the tag, seller resumes from pause, seller publishes a listing with that tag.
 - **The dedupe is the whole difficulty.** Without it, a seller toggling pause twice a day notifies hundreds of buyers repeatedly. Use `dedupeKey = seller_open:{sellerId}:{tagId}:{YYYYMM}` for at most one per buyer/seller/tag per month, skip buyers whose `lastRequestedAt` is older than ~90 days, and cap watchers notified per event (~200, most recently active first).
 - Ship a `/settings/watched-tags` screen with per-tag toggles at the same time. Without an off switch this feature is the app's main spam source.
+
+</details>
 
 ### 7. Pre-request inquiry threads
 

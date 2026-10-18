@@ -2,6 +2,28 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+## 2026-10-18 — Watched-tag alerts [§11.6 — completes spec item 8]
+
+**What a user sees**
+
+- Post a request under a tag and, for the next 90 days, you are told when a seller becomes open to it: "Maya Chen is now open to Photography — you asked for that recently", linking to the tag's search page. At most once per seller per tag per month.
+- `/settings/watched-tags` lists every tag you have requested under, with a per-tag **Watch / Stop** switch and **Turn all off**. Lapsed tags (older than 90 days) are marked; posting again re-arms them.
+- The alert is digested by email (bundled with new-request alerts into the daily "N updates in your tags" message), never sent immediately.
+
+**How it works**
+
+- `BuyerTagInterest(buyerUserId, tagId, notifyOnNewSeller, lastRequestedAt, mutedUntil)` is upserted on every request create (`recordInterest()` in both request creators) and never deleted when the request closes.
+- The three triggers — seller adds a tag, resumes from pause, publishes a listing under a new tag — all funnel through `interests/mutations.ts#notifyWatchers()` inside the same transaction as the change. Only tags that are **new** to the seller count; toggling a tag you already hold, or clicking Resume twice, announces nothing. A paused or suspended seller announces nothing until active.
+- **The dedupe is the whole difficulty** and lives in the notification's dedupe key, `seller_open:{sellerId}:{tagId}:{YYYY-MM}`, enforced by `@@unique([userId, dedupeKey])`. The set-based INSERT also applies: 90-day activity window, the per-tag switch, mutes, not the seller themselves, not blocked either way, not suspended, capped at the 200 most recently active watchers per tag.
+- `NotificationKind.SELLER_OPEN_TO_TAG` with `Notification.tagId`. Copy moved to a context-object signature (`notificationContext()`), shared by the page and email.
+- The digest-email INSERT was factored into `enqueueDigestsForNotificationKey()` and is now used by both the open-request fan-out and this alert; the digest renders both kinds.
+- Migration `20261018100000_watched_tags`.
+
+**Tests**
+
+- `npm test` — 76 (+5: dedupe key by month, the 90-day window, switch, mute).
+- `npm run test:int` — 34 (+8): interest recorded and listed; add-tag alerts the active watcher but not stale / opted-out / blocked buyers; digest (not immediate) email queued; off-and-on in the same month is one alert; resume alerts for every held tag minus earlier ones and repeating Resume is a no-op; a paused seller's new tag waits until they resume; a listing alerts only for tags new to the seller.
+
 ## 2026-10-18 — Module boundaries enforced by lint, plus CI [§11.5]
 
 **What changed**

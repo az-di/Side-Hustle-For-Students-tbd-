@@ -117,6 +117,7 @@ export async function listNotificationsForUser(userId: string) {
       actor: { select: { handle: true, displayName: true } },
       request: { select: { title: true } },
       job: { select: { request: { select: { title: true } } } },
+      tag: { select: { name: true, slug: true } },
     },
     orderBy: { createdAt: "desc" },
     take: 50,

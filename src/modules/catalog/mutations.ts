@@ -1,9 +1,14 @@
 import { db } from "@/lib/db";
 import { invalid } from "@/lib/errors";
+import { notifyWatchers } from "@/modules/interests/mutations";
 
 /**
  * Seller profile, tag and listing writes. All seller-authored prices are NET
  * (what they take home) and are stored exactly as typed — see src/lib/money.ts.
+ *
+ * Three of these are the "a seller became open to a tag" triggers — adding a
+ * tag, resuming from pause, publishing a listing — and all three funnel
+ * through notifyWatchers() inside the same transaction.
  */
 
 const MAX_PORTFOLIO_LINKS = 10;
@@ -17,22 +22,33 @@ export async function becomeSeller(params: { userId: string; headline: string | 
 }
 
 export async function setSellerPaused(params: { userId: string; paused: boolean }): Promise<void> {
-  await db.sellerProfile.update({
-    where: { userId: params.userId },
-    data: { isAvailable: !params.paused, pausedAt: params.paused ? new Date() : null },
+  await db.$transaction(async (tx) => {
+    const updated = await tx.sellerProfile.updateMany({
+      // The guard makes a repeated "Resume" a no-op, so it cannot re-trigger alerts.
+      where: { userId: params.userId, isAvailable: params.paused },
+      data: { isAvailable: !params.paused, pausedAt: params.paused ? new Date() : null },
+    });
+    if (updated.count === 0 || params.paused) return;
+
+    const tags = await tx.sellerTag.findMany({ where: { sellerUserId: params.userId }, select: { tagId: true } });
+    await notifyWatchers(tx, { sellerUserId: params.userId, tagIds: tags.map((t) => t.tagId) });
   });
 }
 
 export async function setSellerTag(params: { userId: string; tagId: string; on: boolean }): Promise<void> {
-  if (params.on) {
-    await db.sellerTag.upsert({
-      where: { sellerUserId_tagId: { sellerUserId: params.userId, tagId: params.tagId } },
-      create: { sellerUserId: params.userId, tagId: params.tagId },
-      update: {},
-    });
-  } else {
+  if (!params.on) {
     await db.sellerTag.deleteMany({ where: { sellerUserId: params.userId, tagId: params.tagId } });
+    return;
   }
+
+  await db.$transaction(async (tx) => {
+    const created = await tx.sellerTag.createMany({
+      data: [{ sellerUserId: params.userId, tagId: params.tagId }],
+      skipDuplicates: true,
+    });
+    if (created.count === 0) return; // already had it: nothing new to announce
+    await notifyWatchers(tx, { sellerUserId: params.userId, tagIds: [params.tagId] });
+  });
 }
 
 export type SellerProfileInput = {
@@ -119,10 +135,20 @@ export async function saveListing(input: ListingInput): Promise<{ listingId: str
       skipDuplicates: true,
     });
 
-    // Publishing a listing under a tag implies being open to that tag.
+    // Publishing a listing under a tag implies being open to that tag. Only
+    // tags that are NEW to this seller count as "opening up".
+    const had = new Set(
+      (await tx.sellerTag.findMany({ where: { sellerUserId: input.sellerUserId }, select: { tagId: true } })).map(
+        (t) => t.tagId,
+      ),
+    );
     await tx.sellerTag.createMany({
       data: input.tagIds.map((tagId) => ({ sellerUserId: input.sellerUserId, tagId })),
       skipDuplicates: true,
+    });
+    await notifyWatchers(tx, {
+      sellerUserId: input.sellerUserId,
+      tagIds: input.tagIds.filter((tagId) => !had.has(tagId)),
     });
 
     return { listingId: listing.id };

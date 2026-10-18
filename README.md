@@ -107,8 +107,8 @@ Note: Vultr blocks outbound port 25 by default. That does not affect us — Rese
 
 Built: the uw.edu gate, tag search with hidden synonyms ("photoshoot" → Photography) and course codes, seller profiles with listings and portfolio links, pause, open **and** direct requests with budgets and deadlines, multi-seller responses with buyer selection, thread-scoped messaging, the mutual completion handshake with auto-confirm, reviews, and in-app notifications with a polled badge.
 
-Also built: reports and mutual blocking with auto-suspension and an admin report queue (`/admin/reports`, `User.isAdmin`); email notifications through a transactional outbox with a daily digest and one-click unsubscribe; portfolio uploads (photos, video, PDF) stored on a volume at `MEDIA_DIR`. See `CHANGELOG.md` for each feature as it lands.
+Also built: reports and mutual blocking with auto-suspension and an admin report queue (`/admin/reports`, `User.isAdmin`); email notifications through a transactional outbox with a daily digest and one-click unsubscribe; portfolio uploads (photos, video, PDF) stored on a volume at `MEDIA_DIR`; watched-tag alerts ("a seller just opened up to a tag you requested") with an off switch at `/settings/watched-tags`. See `CHANGELOG.md` for each feature as it lands.
 
-Not built yet: the full admin console (use Prisma Studio) and watched-tag "a seller just opened up" alerts. Each is noted in HANDOFF.md §11 with what it would take.
+Not built yet: the full admin console (use Prisma Studio). HANDOFF.md §11 has the rest of the list with what each would take.
 
 Before any real launch: the F-1 notice already shown at signup needs a legal read, as do the academic-integrity rules on course tags, the cottage-food question on Cooking/Baking, and a default ownership-of-work clause.

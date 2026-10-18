@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { AppError, conflict, invalid, notAllowed, notFound } from "@/lib/errors";
 import { grossFromNet } from "@/lib/money";
+import { recordInterest } from "@/modules/interests/mutations";
 import { fanOutOpenRequest, notify } from "@/modules/notifications/mutations";
 import { assertCanReach } from "@/modules/trust/mutations";
 import { applyRequestEvent, type RequestStateView } from "./state";
@@ -124,6 +125,9 @@ export async function createDirectRequest(
       threadId: thread.id,
     });
 
+    // The buyer now has a standing interest in these tags (watched-tag alerts).
+    await recordInterest(tx, { buyerUserId: input.buyerUserId, tagIds: input.tagIds });
+
     return { requestId: request.id, threadId: thread.id };
   });
 }
@@ -154,6 +158,8 @@ export async function createOpenRequest(input: CreateRequestInput): Promise<{ re
       buyerUserId: input.buyerUserId,
       tagIds: input.tagIds,
     });
+
+    await recordInterest(tx, { buyerUserId: input.buyerUserId, tagIds: input.tagIds });
 
     return { requestId: request.id, notified };
   });

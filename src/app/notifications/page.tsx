@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { listNotificationsForUser } from "@/modules/messaging/queries";
-import { NOTIFICATION_COPY as COPY, notificationHref } from "@/modules/notifications/copy";
+import { NOTIFICATION_COPY as COPY, notificationContext, notificationHref } from "@/modules/notifications/copy";
 import { markAllReadAction } from "@/app/actions/marketplace.actions";
 import { Button, Card, EmptyState, PageHeader, RelativeTime } from "@/components/ui";
 
@@ -41,8 +41,6 @@ export default async function NotificationsPage() {
       ) : (
         <ul className="space-y-2">
           {notifications.map((n) => {
-            const title = n.request?.title ?? n.job?.request.title ?? "a request";
-            const actor = n.actor?.displayName ?? "Someone";
             const href = notificationHref(n);
 
             return (
@@ -50,7 +48,7 @@ export default async function NotificationsPage() {
                 <Link href={href} className="block">
                   <Card className={n.readAt === null ? "border-brand/40 bg-brand-soft/40" : undefined}>
                     <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm">{COPY[n.kind](actor, title)}</p>
+                      <p className="text-sm">{COPY[n.kind](notificationContext(n))}</p>
                       <RelativeTime date={n.createdAt} />
                     </div>
                   </Card>

@@ -17,7 +17,10 @@ export const DIGEST_DELAY_MS = 60 * 60 * 1000;
  * "N new requests in your tags" message, at most one per user per bucket.
  * 1:1 events stay immediate.
  */
-const DIGEST_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKind>(["OPEN_REQUEST_IN_TAG"]);
+export const DIGEST_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKind>([
+  "OPEN_REQUEST_IN_TAG",
+  "SELLER_OPEN_TO_TAG",
+]);
 
 /** Kinds that are noisy enough in-app that email adds nothing. */
 const NO_EMAIL_KINDS: ReadonlySet<NotificationKind> = new Set<NotificationKind>(["RESPONSE_NOT_SELECTED"]);

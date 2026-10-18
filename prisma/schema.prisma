@@ -47,6 +47,7 @@ model User {
   outboundEmails OutboundEmail[]
   mediaAssets    MediaAsset[]
   portfolioItems PortfolioItem[]
+  tagInterests   BuyerTagInterest[]
   trust          UserTrust?
   blocksMade     Block[]  @relation("BlocksMade")
   blocksReceived Block[]  @relation("BlocksReceived")
@@ -135,11 +136,32 @@ model Tag {
   isActive    Boolean  @default(true)
   sortOrder   Int      @default(100)
 
-  sellerTags  SellerTag[]
-  listingTags ListingTag[]
-  requestTags RequestTag[]
+  sellerTags     SellerTag[]
+  listingTags    ListingTag[]
+  requestTags    RequestTag[]
+  buyerInterests BuyerTagInterest[]
+  notifications  Notification[]
 
   @@index([kind, isActive, sortOrder])
+}
+
+/// A buyer who has requested under a tag keeps an interest in it, so they can
+/// be told when a seller becomes open to it. Upserted on every request create
+/// and NEVER deleted when the request closes — that is the state the request
+/// lifecycle otherwise throws away.
+model BuyerTagInterest {
+  buyerUserId       String
+  tagId             String
+  notifyOnNewSeller Boolean   @default(true)
+  lastRequestedAt   DateTime
+  mutedUntil        DateTime?
+  createdAt         DateTime  @default(now())
+
+  buyer User @relation(fields: [buyerUserId], references: [id], onDelete: Cascade)
+  tag   Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([buyerUserId, tagId])
+  @@index([tagId, notifyOnNewSeller, lastRequestedAt(sort: Desc)]) // the watcher fan-out
 }
 
 model SellerTag {
@@ -416,6 +438,7 @@ enum NotificationKind {
   JOB_CANCELLED
   REVIEW_RECEIVED
   MESSAGE_RECEIVED
+  SELLER_OPEN_TO_TAG // a seller became open to a tag the buyer has requested under
 }
 
 model Notification {
@@ -425,6 +448,7 @@ model Notification {
   requestId   String?
   jobId       String?
   threadId    String?
+  tagId       String?
   actorUserId String?
 
   // Ids only — never a rendered string like "New request: $100 for photos".
@@ -438,6 +462,7 @@ model Notification {
   request Request? @relation(fields: [requestId], references: [id], onDelete: Cascade)
   job     Job?     @relation(fields: [jobId], references: [id], onDelete: Cascade)
   thread  Thread?  @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tag     Tag?     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@unique([userId, dedupeKey]) // makes fan-out and retries idempotent
   @@index([userId, createdAt(sort: Desc)])
