@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_FEE_BPS,
   feeFromGross,
+  flatFitsHourly,
   formatCents,
   grossFromNet,
   netFromGross,
@@ -60,6 +61,21 @@ describe("formatCents", () => {
     expect(formatCents(9_000)).toBe("$90");
     expect(formatCents(9_050)).toBe("$90.50");
     expect(formatCents(null)).toBe("—");
+  });
+});
+
+describe("flatFitsHourly", () => {
+  it("lets a one-hour job sit at the hourly rate", () => {
+    expect(flatFitsHourly(4_000, 4_000)).toBe(true);
+  });
+
+  it("rejects a one-hour shoot that costs almost two hours of labor", () => {
+    // $70 for ~an hour of photos + light edits, at $40/hr.
+    expect(flatFitsHourly(7_000, 4_000)).toBe(false);
+  });
+
+  it("allows a little extra for editing on top of the hour", () => {
+    expect(flatFitsHourly(6_000, 4_000)).toBe(true);
   });
 });
 

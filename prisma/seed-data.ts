@@ -368,7 +368,7 @@ export const PEOPLE: SeedPerson[] = [
       headline: "Campus photographer — portraits, grad photos, events",
       about:
         "I have shot 40+ sessions around UW: grad photos at Drumheller, club events in the HUB, headshots for RSO officers. Turnaround is usually 3 days with lightly edited finals.",
-      fixedPriceCents: 9_000,
+      fixedPriceCents: 4_500,
       hourlyRateCents: 4_500,
       portfolioLinks: ["https://instagram.com/mayachen.photo", "https://mayachen.myportfolio.com"],
       tagSlugs: ["photography", "photo-editing"],
@@ -377,7 +377,7 @@ export const PEOPLE: SeedPerson[] = [
           title: "Grad photo session (1 hour, 25 edited photos)",
           description:
             "One hour around campus — Drumheller, Suzzallo, the Quad if the cherries are out. You get 25 edited photos within 3 days, plus every raw frame if you want them.",
-          fixedPriceCents: 9_000,
+          fixedPriceCents: 4_500,
           turnaroundDays: 3,
           tagSlugs: ["photography"],
         },
@@ -403,7 +403,6 @@ export const PEOPLE: SeedPerson[] = [
       headline: "3D modeling and product renders",
       about:
         "Blender and Fusion 360. I do product renders for capstone projects, print-ready models, and simple character work. Happy to iterate twice on any render.",
-      fixedPriceCents: 7_500,
       hourlyRateCents: 3_500,
       portfolioLinks: ["https://devpatel.cargo.site"],
       tagSlugs: ["3d-modeling", "animation"],
@@ -432,16 +431,16 @@ export const PEOPLE: SeedPerson[] = [
       headline: "Event and portrait photography, film or digital",
       about:
         "I shoot a lot of club events and portrait sessions. Film if you want something with character, digital if you need it fast. Usually 2 day turnaround on digital.",
-      fixedPriceCents: 7_000,
+      fixedPriceCents: 4_000,
       hourlyRateCents: 4_000,
       portfolioLinks: ["https://instagram.com/kaishoots35mm"],
       tagSlugs: ["photography", "photo-editing"],
       listings: [
         {
-          title: "Portrait session (45 min, 15 edited photos)",
+          title: "Portrait session (about an hour, 15 edited photos)",
           description:
-            "Forty-five minutes anywhere on campus. 15 edited photos back within 2 days. Film option available if you are not in a rush.",
-          fixedPriceCents: 7_000,
+            "About an hour anywhere on campus — shoot plus a first pass of edits. 15 edited photos back within 2 days. Film option available if you are not in a rush.",
+          fixedPriceCents: 4_000,
           turnaroundDays: 2,
           tagSlugs: ["photography"],
         },
@@ -458,7 +457,6 @@ export const PEOPLE: SeedPerson[] = [
       headline: "Logos, posters and club merch design",
       about:
         "I design for six RSOs on campus. Fast turnaround on posters, and logo packages come with the source files so you are never stuck waiting on me later.",
-      fixedPriceCents: 6_000,
       hourlyRateCents: 3_000,
       portfolioLinks: ["https://behance.net/priyaraman", "https://instagram.com/priya.designs"],
       tagSlugs: ["graphic-design", "drawing-and-physical-art"],

@@ -84,6 +84,19 @@ export function formatCents(cents: number | null | undefined): string {
   return dollars % 1 === 0 ? `$${dollars.toFixed(0)}` : `$${dollars.toFixed(2)}`;
 }
 
+/**
+ * A packaged job that takes about an hour of work should land near the hourly
+ * rate. 1.5× lets a little editing ride along; 2× is "this is not an hour of
+ * work, it is two." Used when a seller sets a flat price and an hourly rate
+ * on the same profile or listing.
+ */
+export const FLAT_VS_HOURLY_MAX_RATIO = 1.5;
+
+export function flatFitsHourly(fixedCents: number, hourlyCents: number): boolean {
+  if (hourlyCents <= 0) return true;
+  return fixedCents <= Math.round(hourlyCents * FLAT_VS_HOURLY_MAX_RATIO);
+}
+
 /** Parses "$1,200.50" / "1200.5" / "" into cents. Returns null for blank input. */
 export function parseDollarsToCents(input: string): number | null {
   const cleaned = input.replace(/[$,\s]/g, "");

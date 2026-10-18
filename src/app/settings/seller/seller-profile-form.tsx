@@ -50,11 +50,11 @@ export function SellerProfileForm({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Typical flat price" hint="What you take home.">
-          <Input name="fixed" inputMode="decimal" defaultValue={initial.fixed} placeholder="90" />
+        <Field label="Typical flat price" hint="What you take home for about an hour of work.">
+          <Input name="fixed" inputMode="decimal" defaultValue={initial.fixed} placeholder="40" />
         </Field>
         <Field label="Hourly rate" hint="What you take home.">
-          <Input name="hourly" inputMode="decimal" defaultValue={initial.hourly} placeholder="45" />
+          <Input name="hourly" inputMode="decimal" defaultValue={initial.hourly} placeholder="40" />
         </Field>
       </div>
       {/*
@@ -62,7 +62,8 @@ export function SellerProfileForm({
         back on their own profile. Buyers' budgets are grossed up from these.
       */}
       <p className="-mt-2 text-xs text-ink-soft">
-        These are the amounts you receive. Buyers see them as-is; HUSTL does not mark up your listing.
+        These are the amounts you receive. A one-hour job should land near your hourly rate — not almost two hours of
+        pay for one hour of work. Buyers see them as-is; HUSTL does not mark up your listing.
       </p>
 
       <Field

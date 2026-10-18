@@ -39,11 +39,11 @@ export function ListingForm() {
       </Field>
 
       <div className="grid grid-cols-3 gap-3">
-        <Field label="Flat price">
-          <Input name="fixed" inputMode="decimal" placeholder="90" />
+        <Field label="Flat price" hint="For about an hour of work, keep this near your hourly rate.">
+          <Input name="fixed" inputMode="decimal" placeholder="40" />
         </Field>
         <Field label="Hourly">
-          <Input name="hourly" inputMode="decimal" placeholder="45" />
+          <Input name="hourly" inputMode="decimal" placeholder="40" />
         </Field>
         <Field label="Turnaround">
           <Input name="turnaroundDays" inputMode="numeric" placeholder="3 days" />

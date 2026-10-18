@@ -1,6 +1,15 @@
 import { db } from "@/lib/db";
 import { invalid } from "@/lib/errors";
+import { flatFitsHourly, formatCents } from "@/lib/money";
 import { notifyWatchers } from "@/modules/interests/mutations";
+
+function assertFlatMatchesHourly(fixedCents: number | null, hourlyCents: number | null): void {
+  if (fixedCents === null || hourlyCents === null) return;
+  if (flatFitsHourly(fixedCents, hourlyCents)) return;
+  throw invalid(
+    `A job that takes about an hour should be close to ${formatCents(hourlyCents)}/hr, not ${formatCents(fixedCents)}.`,
+  );
+}
 
 /**
  * Seller profile, tag and listing writes. All seller-authored prices are NET
@@ -88,6 +97,7 @@ export type SellerProfileInput = {
 };
 
 export async function saveSellerProfile(input: SellerProfileInput): Promise<void> {
+  assertFlatMatchesHourly(input.fixedPriceCents, input.hourlyRateCents);
   const links = input.portfolioLinks.map((l) => l.trim()).filter((l) => l.length > 0).slice(0, MAX_PORTFOLIO_LINKS);
 
   await db.$transaction(async (tx) => {
@@ -132,6 +142,7 @@ export async function saveListing(input: ListingInput): Promise<{ listingId: str
   if (input.fixedPriceCents === null && input.hourlyRateCents === null) {
     throw invalid("Set a flat price, an hourly rate, or both.");
   }
+  assertFlatMatchesHourly(input.fixedPriceCents, input.hourlyRateCents);
   if (input.tagIds.length === 0) throw invalid("Pick at least one tag.");
 
   return db.$transaction(async (tx) => {
