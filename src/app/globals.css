@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #16141f;
+  --color-ink-soft: #55506b;
+  --color-ink-faint: #8b86a0;
+  --color-line: #e7e4ef;
+  --color-surface: #ffffff;
+  --color-canvas: #faf9fc;
+  --color-brand: #5b2bd9;
+  --color-brand-soft: #f1ebfe;
+  --color-brand-ink: #3d1a99;
+  --color-money: #0f7a52;
+  --color-money-soft: #e6f6ef;
+  --color-warn: #9a5b00;
+  --color-warn-soft: #fdf3e2;
+  --color-danger: #b3261e;
+  --color-danger-soft: #fdecea;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+  --radius-card: 14px;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  /* Safe-area padding so the sticky bottom nav clears an iPhone home bar. */
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Inputs must be >=16px on iOS or Safari zooms the whole page on focus. */
+input,
+textarea,
+select {
+  font-size: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
