@@ -2,7 +2,7 @@
 
 Everything that exists, why it is built the way it is, and exactly what to do next.
 
-Written at commit `05b890d`. If you read one section before touching code, make it [The money boundary](#4-the-money-boundary--read-before-touching-any-money-code).
+Originally written at commit `05b890d`; updated through the overnight build of 2026-10-18 (see `CHANGELOG.md` for each feature). If you read one section before touching code, make it [The money boundary](#4-the-money-boundary--read-before-touching-any-money-code).
 
 ---
 
@@ -28,16 +28,17 @@ Written at commit `05b890d`. If you read one section before touching code, make 
 
 ## 1. Status
 
-**The spec's core loop works end to end and has been walked in a browser**: a buyer finds a seller, they agree on a job, it gets done, the buyer reviews. Deployed nowhere yet — it runs locally.
+**Every in-scope spec item is built**, and every item in [§11](#11-what-is-not-built-and-how-to-build-it) except deployment is done: the core loop, reports and blocking, email, uploads, watched-tag alerts, inquiry threads, the admin console, rate limiting, a curated course catalog, lint-enforced module boundaries, CI, and the test suites. Deployed nowhere yet — it runs locally and in GitHub Actions.
 
 | | |
 | --- | --- |
-| Commit | `05b890d`, 73 files |
-| Tests | 45 passing across 4 files (`npm test`) |
-| Typecheck | clean (`npx tsc --noEmit`) |
-| Production build | succeeds, 16 routes |
-| Spec coverage | 10 of 14 in-scope items complete, 2 partial, 2 not started — see [§3](#3-what-is-built) |
-| Deployed | **no** — see [§12](#12-deploying-to-vultr) |
+| Commit | 11 feature commits on top of `5a854eb`, 160 tracked files — see `CHANGELOG.md` |
+| Tests | 86 unit (`npm test`) · 61 integration (`npm run test:int`) · 13 e2e (`npm run test:e2e`) |
+| Lint / typecheck | clean (`npm run lint`, `npx tsc --noEmit`), with the module-boundary rules enforced |
+| Production build | succeeds, 30 routes |
+| CI | GitHub Actions on every push: lint → tsc → unit → migrate + seed → integration → build → e2e, all green |
+| Spec coverage | **14 of 14** in-scope items complete — see [§3](#3-what-is-built) |
+| Deployed | **no** — see [§12](#12-deploying-to-vultr); needs someone with Coolify access |
 
 The original product spec is [Side Hustle for Students (temp title).md](Side%20Hustle%20for%20Students%20(temp%20title).md). The full technical plan, including the phased build order and the risk table, lives outside the repo at `C:\Users\azdi\.claude\plans\read-the-attached-markdown-lively-lagoon.md` — **copy it into the repo** if more than one person is working from it.
 
@@ -97,7 +98,7 @@ Against the spec's 14 in-scope items:
 | 13 | Buyer accountability (reports → hidden rating → closure) | ✅ Weighted reports, hidden `UserTrust` standing, auto-suspend at a tunable threshold, admin queue. See CHANGELOG |
 | 14 | Reporting and blocking | ✅ Mutual, silent blocks enforced in point actions **and** every feed; integration-tested in both directions |
 
-Beyond the spec: the **hidden platform cut** ([§4](#4-the-money-boundary--read-before-touching-any-money-code)) and **Venmo handle exchange** on the job page, revealed only to the two people on a job.
+Beyond the spec: the **hidden platform cut** ([§4](#4-the-money-boundary--read-before-touching-any-money-code)), **Venmo handle exchange** on the job page (revealed only to the two people on a job), email notifications with a daily digest, hosted portfolio media, pre-request inquiry threads, an admin console with an audit log, rate limiting, and draft terms/privacy pages. Each is a CHANGELOG entry.
 
 ---
 
@@ -305,7 +306,9 @@ Hard-won; do not rediscover them.
 
 ## 11. What is NOT built, and how to build it
 
-In the order I would do them.
+In the order I would do them. **Status after the overnight build: 1, 3–12 done; 2 (deploy) needs someone with
+Coolify access.** Each done item keeps its original plan in a collapsed block, with a note on what was built
+differently and why.
 
 ### 1. Reports and blocking — spec items 13 and 14 ★ DONE
 
@@ -368,9 +371,14 @@ Account closure: a `User.status` enum (`ACTIVE | SUSPENDED | CLOSED`) checked on
 
 </details>
 
-### 2. Deploy to Vultr
+### 2. Deploy to Vultr — NOT DONE (needs Coolify access)
 
-See [§12](#12-deploying-to-vultr). Do this before adding features if anyone else needs to see it.
+See [§12](#12-deploying-to-vultr). Everything is ready for it: CI proves `npm ci && prisma generate && next build`
+and the full test suites pass on Linux/Node 24 against Postgres 17; `nixpacks.toml` pins Node 24. Two things changed
+since the original deploy notes and are in §12: **mount a persistent volume at `MEDIA_DIR`**, and the new env vars
+(`APP_URL`, `EMAIL_DRAIN_INTERVAL_MS`, `CRON_SECRET`, `MEDIA_*`). After the first deploy, run
+`npx tsx scripts/smoke-media.ts https://your-domain` and `E2E_BASE_URL=https://your-domain npm run test:e2e` from a
+machine with the production `DATABASE_URL` — or just walk the demo in §13.
 
 ### 3. Email notifications — DONE
 
@@ -505,9 +513,13 @@ None exists. Before any public launch, limit OTP requests per IP and per address
 
 </details>
 
-### 12. Legal and policy
+### 12. Legal and policy — DRAFTED, needs a legal read
 
-The F-1 notice, academic-integrity rules and the Venmo/no-escrow explanation are shown at `/welcome`. Still needed: standalone terms and privacy pages, a default ownership-of-work clause, the cottage-food question for Cooking/Baking (Washington has specific rules), and a quick legal read before real users touch it.
+`/terms` and `/privacy` exist, in plain language, with a **draft** banner on each. The terms include the default
+ownership-of-work clause (seller keeps copyright, buyer gets a non-exclusive licence on payment, override in messages),
+the academic-integrity rule, the F-1/J-1 notice, the cottage-food caution, and conduct/report/closure rules. The
+privacy page matches what the code stores. `/welcome` links both. **Still needed: the quick legal read before real
+users touch it** — the banners stay until then.
 
 ---
 
@@ -561,6 +573,8 @@ Three minutes. Have a **second browser profile or laptop signed in as Maya** so 
 8. **The loop closes** — Alex leaves 5★ and it appears on Maya's profile with her rating and completed-job count.
 9. **Next** — one line: Stripe Connect flips the 10% from display to real, and no seller-facing number changes.
 
+Optional extra beats if there is time: **Report · Block** on Kai's profile and the queue at `/admin/reports` (Alex is an admin); Maya resuming from pause and Alex's "Maya is now open to Photography" notification; a portfolio photo upload on Maya's profile.
+
 Set `AUTO_COMPLETE_MS=120000` if you want to show auto-confirm on stage. Run `npm run db:reset` beforehand for clean data.
 
 ---
@@ -592,7 +606,7 @@ document.documentElement.outerHTML.includes("10000")       // must be false
 ## 15. Open questions for the team
 
 1. **Does the 10% stay waived?** Right now nobody pays it and nobody collects it — a $100 budget becomes $90 of work and the $10 evaporates. The mechanism is right for v2, but if "fee waived in beta" proves confusing, set `feeBps = 0` and the hiding still works, just with net equal to gross.
-2. **Report threshold for account closure.** The spec marks it TBD. Put it in `PlatformSetting`, not code.
+2. **Report threshold for account closure.** Now a setting, default 3, editable at `/admin`. The weights (scam 3, abusive 2, academic 2, others 1) are code (`trust/state.ts`) — argue about those.
 3. **Cooking and baking.** Washington's cottage food rules and UW housing policy may restrict selling home-prepared food. Both tags are seeded and live — confirm before anyone actually sells a cake.
 4. **Full course catalog or curated?** 20 courses now. Full coverage means thousands of empty tags.
 5. **Does the pitch want "no 20% platform fee" on the landing page** while a 10% fee exists in the data model? Currently the copy says the cut is waived in beta, which is accurate — keep it accurate.

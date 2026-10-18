@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { ButtonLink, Card, PageHeader } from "@/components/ui";
@@ -59,6 +60,17 @@ export default async function WelcomePage() {
         <p>
           Payment happens directly between you, over Venmo. HUSTL does not hold money, and its 10% fee is waived
           during the beta.
+        </p>
+        <p>
+          By continuing you agree to the{" "}
+          <Link href="/terms" className="underline">
+            terms
+          </Link>{" "}
+          (including the default ownership-of-work clause) and the{" "}
+          <Link href="/privacy" className="underline">
+            privacy policy
+          </Link>
+          .
         </p>
       </div>
 

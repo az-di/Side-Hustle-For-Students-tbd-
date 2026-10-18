@@ -110,6 +110,6 @@ Built: the uw.edu gate, tag search with hidden synonyms ("photoshoot" → Photog
 
 Also built: reports and mutual blocking with auto-suspension; email notifications through a transactional outbox with a daily digest and one-click unsubscribe; portfolio uploads (photos, video, PDF) stored on a volume at `MEDIA_DIR`; watched-tag alerts ("a seller just opened up to a tag you requested") with an off switch at `/settings/watched-tags`; pre-request inquiry threads; and an admin console at `/admin` (report queue, tag and synonym editing, users, a tunable suspend threshold, and an audit log of every admin write). See `CHANGELOG.md` for each feature as it lands.
 
-HANDOFF.md §11 has what is still open (rate limiting, more tests, the full course catalog, legal pages) with what each would take.
+Plus rate limiting on sign-in codes, requests, responses, messages, reports and uploads; a 100-course tutoring catalog with bulk-select by subject; and draft `/terms` and `/privacy` pages. HANDOFF.md §11 tracks each item with what was built differently from the original plan and why.
 
-Before any real launch: the F-1 notice already shown at signup needs a legal read, as do the academic-integrity rules on course tags, the cottage-food question on Cooking/Baking, and a default ownership-of-work clause.
+Before any real launch: the terms and privacy drafts (ownership-of-work clause, academic-integrity rules, the F-1 notice, the cottage-food question) need a legal read — the draft banners on those pages stay until then.

@@ -73,8 +73,17 @@ export function AppShell({ viewer, children }: { viewer: Viewer | null; children
 
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-5 pb-24 sm:pb-8">{children}</div>
 
-      {viewer ? (
-        <footer className="mx-auto w-full max-w-3xl px-4 pb-24 text-xs text-ink-faint sm:pb-6">
+      <footer className="mx-auto w-full max-w-3xl px-4 pb-24 text-xs text-ink-faint sm:pb-6">
+        <Link href="/terms" className="underline hover:text-ink-soft">
+          Terms
+        </Link>
+        {" · "}
+        <Link href="/privacy" className="underline hover:text-ink-soft">
+          Privacy
+        </Link>
+        {viewer ? (
+          <>
+          {" · "}
           <Link href="/settings/safety" className="underline hover:text-ink-soft">
             Blocked people and reports
           </Link>
@@ -94,8 +103,9 @@ export function AppShell({ viewer, children }: { viewer: Viewer | null; children
               </Link>
             </>
           ) : null}
-        </footer>
-      ) : null}
+          </>
+        ) : null}
+      </footer>
 
       {viewer ? <BottomNav isSeller={viewer.isSeller} /> : null}
     </div>

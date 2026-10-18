@@ -2,6 +2,17 @@
 
 Newest first. Each entry is one pushed feature; the HANDOFF §11 number it closes is in brackets.
 
+**Overnight build, 2026-10-18 (eleven pushes).** Everything in HANDOFF §11 except the deploy itself: reports and
+blocking · email outbox with digests · media uploads · lint-enforced module boundaries and CI · watched-tag alerts ·
+inquiry threads · admin console with audit log · rate limiting · concurrency / loop / money-leak e2e tests · a
+100-course catalog · draft terms and privacy pages. Test counts went from 45 unit to 86 unit + 61 integration +
+13 end-to-end, all green in GitHub Actions. Nothing was added to `package.json` dependencies.
+
+## 2026-10-18 — Terms and privacy drafts [§11.12]
+
+- `/terms` and `/privacy` in plain language, each with a **draft — not reviewed by a lawyer** banner that stays until that read happens. The terms carry the default ownership-of-work clause (seller keeps copyright; buyer gets a non-exclusive licence on payment; override in messages), the academic-integrity rule, the F-1/J-1 notice, the cottage-food caution, and the report/suspension rules. The privacy page matches what the code stores and who can see it.
+- Linked from `/welcome` ("by continuing you agree…") and the footer on every page.
+
 ## 2026-10-18 — Course catalog: 100 curated courses, bulk-select by subject [§11.9]
 
 **What a user sees**
