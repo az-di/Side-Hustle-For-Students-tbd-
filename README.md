@@ -41,7 +41,8 @@ Seeded personas: **Alex Kim** and **Zoe Williams** (buyers), **Maya Chen** and *
 | Script | What it does |
 | --- | --- |
 | `npm run dev` | Dev server |
-| `npm test` | Unit tests — money math, both state machines, the leak suite |
+| `npm test` | Unit tests — money math, the state machines, trust rules, the leak suite |
+| `npm run test:int` | Integration tests against the Postgres in `DATABASE_URL` (safe on a seeded dev DB) |
 | `npm run db:seed` | Idempotent seed; safe to re-run |
 | `npm run db:reset` | Drop, re-migrate, re-seed |
 | `npm run db:studio` | Prisma Studio — this is the admin console for now |
@@ -105,6 +106,8 @@ Note: Vultr blocks outbound port 25 by default. That does not affect us — Rese
 
 Built: the uw.edu gate, tag search with hidden synonyms ("photoshoot" → Photography) and course codes, seller profiles with listings and portfolio links, pause, open **and** direct requests with budgets and deadlines, multi-seller responses with buyer selection, thread-scoped messaging, the mutual completion handshake with auto-confirm, reviews, and in-app notifications with a polled badge.
 
-Not built, and deliberately so: email beyond the OTP, media uploads (portfolio is links), reports/blocks/moderation, an admin console (use Prisma Studio), and watched-tag "a seller just opened up" alerts. Each is noted in the plan with what it would take.
+Also built: reports and mutual blocking, auto-suspension at a tunable weighted-report threshold, and a minimal admin report queue at `/admin/reports` (`User.isAdmin`). See `CHANGELOG.md` for each feature as it lands.
+
+Not built yet: email beyond the OTP, media uploads (portfolio is links), the full admin console (use Prisma Studio), and watched-tag "a seller just opened up" alerts. Each is noted in HANDOFF.md §11 with what it would take.
 
 Before any real launch: the F-1 notice already shown at signup needs a legal read, as do the academic-integrity rules on course tags, the cottage-food question on Cooking/Baking, and a default ownership-of-work clause.

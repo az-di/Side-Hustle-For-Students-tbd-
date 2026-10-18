@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { invalid, notAllowed, notFound } from "@/lib/errors";
 import { notify } from "@/modules/notifications/mutations";
+import { assertCanReach } from "@/modules/trust/mutations";
 
 const MAX_MESSAGE_LENGTH = 4_000;
 
@@ -29,6 +30,10 @@ export async function sendMessage(params: {
   const isBuyer = params.senderUserId === thread.buyerUserId;
   const recipient = isBuyer ? thread.sellerUserId : thread.buyerUserId;
   const now = new Date();
+
+  // A thread outlives a block (the job history stays readable), but nobody
+  // can post into it while one exists.
+  await assertCanReach(params.senderUserId, recipient);
 
   await db.$transaction(async (tx) => {
     await tx.message.create({

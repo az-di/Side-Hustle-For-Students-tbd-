@@ -18,7 +18,8 @@ export class AuthError extends Error {
       | "EXPIRED"
       | "TOO_MANY_ATTEMPTS"
       | "BAD_CODE"
-      | "NOT_SIGNED_IN",
+      | "NOT_SIGNED_IN"
+      | "SUSPENDED",
   ) {
     super(message);
     this.name = "AuthError";
@@ -135,7 +136,10 @@ export async function verifyOtpAndSignIn(rawEmail: string, rawCode: string): Pro
     data: { consumedAt: new Date() },
   });
 
-  const existing = await db.user.findUnique({ where: { uwEmail: email }, select: { id: true } });
+  const existing = await db.user.findUnique({ where: { uwEmail: email }, select: { id: true, status: true } });
+  if (existing?.status === "CLOSED") {
+    throw new AuthError("This account has been closed.", "SUSPENDED");
+  }
 
   const userId =
     existing?.id ??
@@ -195,9 +199,18 @@ export type Viewer = {
   venmoHandle: string | null;
   isAdmin: boolean;
   isSeller: boolean;
+  /** ACTIVE or SUSPENDED. A CLOSED account never produces a viewer. */
+  status: "ACTIVE" | "SUSPENDED";
 };
 
-/** The signed-in user, or null. Safe to call from any server component. */
+/**
+ * The signed-in user, or null. Safe to call from any server component.
+ *
+ * A CLOSED account reads as signed out: its sessions were deleted when it was
+ * closed, and this is the backstop for any that were created in between. A
+ * SUSPENDED account still gets a viewer so the person can read their threads
+ * and see the banner explaining why nothing else works.
+ */
 export async function getViewer(): Promise<Viewer | null> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
@@ -216,6 +229,7 @@ export async function getViewer(): Promise<Viewer | null> {
           avatarUrl: true,
           venmoHandle: true,
           isAdmin: true,
+          status: true,
           sellerProfile: { select: { userId: true } },
         },
       },
@@ -225,6 +239,8 @@ export async function getViewer(): Promise<Viewer | null> {
   if (!session || session.expiresAt.getTime() < Date.now()) return null;
 
   const { user } = session;
+  if (user.status === "CLOSED") return null;
+
   return {
     id: user.id,
     handle: user.handle,
@@ -234,10 +250,25 @@ export async function getViewer(): Promise<Viewer | null> {
     venmoHandle: user.venmoHandle,
     isAdmin: user.isAdmin,
     isSeller: user.sellerProfile !== null,
+    status: user.status,
   };
 }
 
+/**
+ * For anything that writes. A suspended account is refused here, in one place,
+ * so no server action has to remember to check.
+ */
 export async function requireViewer(): Promise<Viewer> {
+  const viewer = await getViewer();
+  if (!viewer) throw new AuthError("Sign in to continue.", "NOT_SIGNED_IN");
+  if (viewer.status !== "ACTIVE") {
+    throw new AuthError("Your account is suspended, so you cannot do that right now.", "SUSPENDED");
+  }
+  return viewer;
+}
+
+/** For reads and housekeeping (marking things read) that a suspended person may still do. */
+export async function requireAnyViewer(): Promise<Viewer> {
   const viewer = await getViewer();
   if (!viewer) throw new AuthError("Sign in to continue.", "NOT_SIGNED_IN");
   return viewer;

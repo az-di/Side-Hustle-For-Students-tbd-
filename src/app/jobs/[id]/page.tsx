@@ -5,7 +5,9 @@ import { AppError } from "@/lib/errors";
 import { formatCents } from "@/lib/money";
 import { getJobForViewer } from "@/modules/jobs/queries";
 import { JOB_STATUS_LABELS } from "@/modules/jobs/state";
+import { relationshipWith } from "@/modules/trust/queries";
 import { rejectCompletionAction } from "@/app/actions/marketplace.actions";
+import { SafetyMenu } from "@/components/safety-menu";
 import {
   Avatar,
   Badge,
@@ -34,6 +36,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
 
   const counterparty = job.role === "SELLER" ? job.buyer : job.seller;
   const iMarkedComplete = job.completionRequestedById === viewer.id;
+  const relationship = await relationshipWith(viewer.id, counterparty.id);
 
   return (
     <main>
@@ -99,6 +102,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
               {counterparty.displayName}
             </Link>
             <p className="text-xs text-ink-soft">{job.role === "SELLER" ? "Your buyer" : "Your seller"}</p>
+            <SafetyMenu handle={counterparty.handle} blockedByMe={relationship.blockedByMe} jobId={job.id} canReport />
           </div>
           {job.threadId ? (
             <ButtonLink href={`/threads/${job.threadId}`} size="sm" variant="secondary">

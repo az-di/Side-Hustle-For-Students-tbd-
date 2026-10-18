@@ -57,12 +57,14 @@ async function main() {
         bio: person.bio,
         venmoHandle: person.venmoHandle,
         isDemo: true,
+        isAdmin: person.isAdmin ?? false,
       },
       update: {
         displayName: person.displayName,
         bio: person.bio,
         venmoHandle: person.venmoHandle,
         isDemo: true,
+        isAdmin: person.isAdmin ?? false,
       },
       select: { id: true },
     });

@@ -191,6 +191,8 @@ export type SeedPerson = {
   venmoHandle?: string;
   /** Shown in the DEMO_MODE persona switcher. */
   demoRole?: string;
+  /** Can open /admin/reports. */
+  isAdmin?: boolean;
   seller?: {
     headline: string;
     about: string;
@@ -218,6 +220,7 @@ export const PEOPLE: SeedPerson[] = [
     bio: "Events chair for the UW Climbing Club. Always need photos and posters.",
     venmoHandle: "@alex-kim-uw",
     demoRole: "Buyer — club events chair",
+    isAdmin: true,
   },
   {
     email: "maya@uw.edu",

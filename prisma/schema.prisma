@@ -17,18 +17,31 @@ datasource db {
 
 // ──────────────────────────────── identity ────────────────────────────────
 
+enum UserStatus {
+  ACTIVE
+  SUSPENDED // auto or admin; can sign in to read, cannot act
+  CLOSED // admin only; cannot sign in
+}
+
 model User {
-  id          String   @id @default(cuid())
-  uwEmail     String   @unique // lowercased; a CHECK constraint enforces @uw.edu
-  handle      String   @unique
+  id          String     @id @default(cuid())
+  uwEmail     String     @unique // lowercased; a CHECK constraint enforces @uw.edu
+  handle      String     @unique
   displayName String
   bio         String?
   avatarUrl   String?
   venmoHandle String? // revealed only to the counterparty of an existing job
-  isDemo      Boolean  @default(false)
-  isAdmin     Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isDemo      Boolean    @default(false)
+  isAdmin     Boolean    @default(false)
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  trust          UserTrust?
+  blocksMade     Block[]  @relation("BlocksMade")
+  blocksReceived Block[]  @relation("BlocksReceived")
+  reportsMade    Report[] @relation("ReportsMade")
+  reportsAgainst Report[] @relation("ReportsAgainst")
 
   sellerProfile      SellerProfile?
   sessions           Session[]
@@ -288,6 +301,7 @@ model Job {
   review        Review?
   thread        Thread?
   notifications Notification[]
+  reports       Report[]
 
   @@index([status, autoCompleteAt]) // auto-complete sweep
   @@index([sellerUserId, status, createdAt(sort: Desc)])
@@ -417,4 +431,77 @@ model Notification {
 
   @@unique([userId, dedupeKey]) // makes fan-out and retries idempotent
   @@index([userId, createdAt(sort: Desc)])
+}
+
+// ───────────────────────────── trust and safety ───────────────────────────
+
+enum ReportKind {
+  NO_SHOW
+  ABUSIVE
+  SCAM
+  ACADEMIC_DISHONESTY
+  OFF_PLATFORM_PRESSURE
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  UPHELD
+  DISMISSED
+}
+
+model Report {
+  id             String       @id @default(cuid())
+  reporterUserId String
+  subjectUserId  String
+  kind           ReportKind
+  reason         String
+  jobId          String?
+  // jobId, or "general" when the report is not about one job. Postgres treats
+  // NULLs as distinct in a unique index, so the nullable column cannot carry
+  // the "one report per job per reporter" rule on its own.
+  scopeKey       String
+  status         ReportStatus @default(OPEN)
+  weight         Int          @default(1) // frozen at creation; see trust/state.ts
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  reporter User @relation("ReportsMade", fields: [reporterUserId], references: [id], onDelete: Cascade)
+  subject  User @relation("ReportsAgainst", fields: [subjectUserId], references: [id], onDelete: Cascade)
+  job      Job? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@unique([reporterUserId, subjectUserId, scopeKey])
+  @@index([subjectUserId, status])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model Block {
+  blockerUserId String
+  blockedUserId String
+  createdAt     DateTime @default(now())
+
+  blocker User @relation("BlocksMade", fields: [blockerUserId], references: [id], onDelete: Cascade)
+  blocked User @relation("BlocksReceived", fields: [blockedUserId], references: [id], onDelete: Cascade)
+
+  @@id([blockerUserId, blockedUserId])
+  @@index([blockedUserId, blockerUserId]) // reverse lookup for feeds
+}
+
+/// Internal standing. Never leaves admin surfaces or this module.
+model UserTrust {
+  userId              String    @id
+  negativeReportCount Int       @default(0) // sum of weights over OPEN + UPHELD reports
+  autoSuspendedAt     DateTime?
+  updatedAt           DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Tunable numbers that must not need a deploy to change. Read via trust/settings.ts.
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

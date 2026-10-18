@@ -62,7 +62,32 @@ export function AppShell({ viewer, children }: { viewer: Viewer | null; children
         </div>
       </header>
 
+      {viewer?.status === "SUSPENDED" ? (
+        <div className="border-b border-danger/20 bg-danger-soft">
+          <p className="mx-auto max-w-3xl px-4 py-2 text-xs text-danger">
+            <strong>Your account is suspended.</strong> You can read your messages and jobs, but you cannot post, respond
+            or message until it is reviewed. Email the HUSTL team if you think this is a mistake.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mx-auto w-full max-w-3xl flex-1 px-4 py-5 pb-24 sm:pb-8">{children}</div>
+
+      {viewer ? (
+        <footer className="mx-auto w-full max-w-3xl px-4 pb-24 text-xs text-ink-faint sm:pb-6">
+          <Link href="/settings/safety" className="underline hover:text-ink-soft">
+            Blocked people and reports
+          </Link>
+          {viewer.isAdmin ? (
+            <>
+              {" · "}
+              <Link href="/admin/reports" className="underline hover:text-ink-soft">
+                Admin: report queue
+              </Link>
+            </>
+          ) : null}
+        </footer>
+      ) : null}
 
       {viewer ? <BottomNav isSeller={viewer.isSeller} /> : null}
     </div>

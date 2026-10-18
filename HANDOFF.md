@@ -94,8 +94,8 @@ Against the spec's 14 in-scope items:
 | 10 | Job flow: request, accept/decline, both mark complete | ✅ Plus auto-confirm with a configurable window |
 | 11 | Messaging | ✅ Request and job threads, polled. ⚠️ No pre-request inquiry threads |
 | 12 | Reviews, buyers only, after completion | ✅ Rating recomputed transactionally |
-| 13 | Buyer accountability (reports → hidden rating → closure) | ❌ Not built |
-| 14 | Reporting and blocking | ❌ Not built |
+| 13 | Buyer accountability (reports → hidden rating → closure) | ✅ Weighted reports, hidden `UserTrust` standing, auto-suspend at a tunable threshold, admin queue. See CHANGELOG |
+| 14 | Reporting and blocking | ✅ Mutual, silent blocks enforced in point actions **and** every feed; integration-tested in both directions |
 
 Beyond the spec: the **hidden platform cut** ([§4](#4-the-money-boundary--read-before-touching-any-money-code)) and **Venmo handle exchange** on the job page, revealed only to the two people on a job.
 
@@ -305,9 +305,14 @@ Hard-won; do not rediscover them.
 
 In the order I would do them.
 
-### 1. Reports and blocking — spec items 13 and 14 ★ highest value
+### 1. Reports and blocking — spec items 13 and 14 ★ DONE
 
-The only two in-scope items with nothing behind them. Roughly half a day.
+**Built — see `src/modules/trust/` and the CHANGELOG entry.** The design below is what was implemented, with two
+deviations: the trust row is `UserTrust` (reports go both ways, not just at buyers), and reports carry a `scopeKey`
+(`jobId` or `"general"`) because Postgres treats NULLs as distinct in a unique index. Blocking is enforced in both
+places described here and `trust.int.test.ts` is the `describe.each` test asked for.
+
+<details><summary>Original plan (kept for reference)</summary>
 
 **Schema** (`prisma/schema.prisma`, then `npx prisma migrate dev --name trust`):
 
@@ -358,6 +363,8 @@ export const notBlockedWith = (userId: string) => Prisma.sql`
 Call sites to update: `listOpenRequestsForSeller`, `listSellersForTag`, `fanOutOpenRequest` (add the `NOT EXISTS` to the existing `INSERT … SELECT`), `listThreadsForUser`. Write one `describe.each` test asserting every feed hides blocked counterparties **in both directions**.
 
 Account closure: a `User.status` enum (`ACTIVE | SUSPENDED | CLOSED`) checked once in `getViewer()`, plus a threshold in a `PlatformSetting` table so it is tunable without a deploy. The spec leaves the number TBD — start at 3 weighted reports and make it config.
+
+</details>
 
 ### 2. Deploy to Vultr
 

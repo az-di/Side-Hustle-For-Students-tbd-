@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { notFound } from "@/lib/errors";
+import { blockedUserIds, isBlocked } from "@/modules/trust/block-filter";
 import {
   toBuyerRequest,
   toResponseDto,
@@ -52,16 +53,18 @@ const RESPONSE_SELECT = {
  *   * only tags this seller holds
  *   * only requests that have not expired (derived, no sweep needed)
  *   * not their own requests, and nothing already matched
+ *   * nothing from anyone blocked in either direction
  *
  * Returns SELLER DTOs, so every figure is a payout.
  */
 export async function listOpenRequestsForSeller(sellerUserId: string): Promise<SellerRequestDto[]> {
+  const hidden = await blockedUserIds(sellerUserId);
   const rows = await db.request.findMany({
     where: {
       kind: "OPEN",
       status: "OPEN",
       expiresAt: { gt: new Date() },
-      buyerUserId: { not: sellerUserId },
+      buyerUserId: { notIn: [sellerUserId, ...hidden] },
       tags: { some: { tag: { sellerTags: { some: { sellerUserId } } } } },
     },
     select: { ...REQUEST_SELECT, responses: { where: { sellerUserId }, select: { id: true, status: true } } },
@@ -98,12 +101,14 @@ export async function listMyResponses(sellerUserId: string) {
 
 /** Direct requests sent to this seller and still awaiting their answer. */
 export async function listIncomingDirectRequests(sellerUserId: string): Promise<SellerRequestDto[]> {
+  const hidden = await blockedUserIds(sellerUserId);
   const rows = await db.request.findMany({
     where: {
       kind: "DIRECT",
       targetSellerUserId: sellerUserId,
       status: "PENDING_SELLER",
       expiresAt: { gt: new Date() },
+      ...(hidden.length > 0 ? { buyerUserId: { notIn: hidden } } : {}),
     },
     select: REQUEST_SELECT,
     orderBy: { createdAt: "desc" },
@@ -175,10 +180,15 @@ export async function getRequestForViewer(requestId: string, viewerId: string): 
   const effective = effectiveRequestStatus(row, now);
 
   if (row.buyerUserId === viewerId) {
+    // Responses from people blocked after the fact stay out of sight, unless
+    // one was already picked — the job exists and its history is not rewritten.
+    const hidden = new Set(await blockedUserIds(viewerId));
     return {
       role: "BUYER",
       request: toBuyerRequest(row, now),
-      responses: row.responses.map(toResponseDto),
+      responses: row.responses
+        .filter((r) => r.status === "SELECTED" || !hidden.has(r.sellerUserId))
+        .map(toResponseDto),
       jobId: row.job?.id ?? null,
       canCancel: effective === "OPEN" || effective === "PENDING_SELLER",
     };
@@ -192,6 +202,10 @@ export async function getRequestForViewer(requestId: string, viewerId: string): 
 
   const isTarget = row.targetSellerUserId === viewerId;
   const isJobHolder = row.job?.sellerUserId === viewerId;
+
+  // A blocked pair cannot see each other's requests at all — unless they are
+  // already on a job together, which stays readable.
+  if (!isJobHolder && (await isBlocked(viewerId, row.buyerUserId))) throw notFound("That request");
 
   // A seller may only see an open request in one of their tags, a direct
   // request aimed at them, or a request they are already involved in.

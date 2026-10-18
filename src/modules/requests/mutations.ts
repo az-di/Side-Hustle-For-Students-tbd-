@@ -3,6 +3,7 @@ import { env } from "@/lib/env";
 import { AppError, conflict, invalid, notAllowed, notFound } from "@/lib/errors";
 import { grossFromNet } from "@/lib/money";
 import { fanOutOpenRequest, notify } from "@/modules/notifications/mutations";
+import { assertCanReach } from "@/modules/trust/mutations";
 import { applyRequestEvent, type RequestStateView } from "./state";
 
 /**
@@ -66,6 +67,11 @@ export async function createDirectRequest(
   if (input.targetSellerUserId === input.buyerUserId) {
     throw invalid("You cannot send a request to yourself.");
   }
+
+  // Blocks and suspension are checked here, at the point of contact, as well
+  // as in every feed — a policy check cannot filter a list, and a list filter
+  // cannot stop a direct URL.
+  await assertCanReach(input.buyerUserId, input.targetSellerUserId);
 
   const seller = await db.sellerProfile.findUnique({
     where: { userId: input.targetSellerUserId },
@@ -209,6 +215,7 @@ export async function respondToOpenRequest(params: {
     new Date(),
   );
   if (!decision.ok) throw notAllowed(decision.message);
+  await assertCanReach(params.sellerUserId, request.buyerUserId);
 
   return db.$transaction(async (tx) => {
     const response = await tx.requestResponse.create({
@@ -271,6 +278,7 @@ export async function selectResponse(params: {
   });
   if (!chosen || chosen.requestId !== params.requestId) throw notFound("That response");
   if (chosen.status !== "PENDING") throw conflict("That response is no longer available.");
+  await assertCanReach(params.buyerUserId, chosen.sellerUserId);
 
   const budget = await db.request.findUniqueOrThrow({
     where: { id: params.requestId },
@@ -366,6 +374,7 @@ export async function acceptDirectRequest(params: {
   const request = await loadForTransition(params.requestId);
   const decision = applyRequestEvent(request, "SELLER_ACCEPT", { userId: params.sellerUserId }, new Date());
   if (!decision.ok) throw notAllowed(decision.message);
+  await assertCanReach(params.sellerUserId, request.buyerUserId);
 
   const budget = await db.request.findUniqueOrThrow({
     where: { id: params.requestId },

@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { blockedUserIds } from "@/modules/trust/block-filter";
 
 /** Mirrors the normalization used when seeding searchTerms. One source of truth. */
 export function normalizeTerm(raw: string): string {
@@ -86,12 +87,15 @@ export async function listServiceTags() {
  *
  * Paused sellers are still LISTED (the spec is explicit: they stay visible and
  * just receive no new requests), so they are returned with isAvailable false
- * and the UI badges them.
+ * and the UI badges them. Suspended sellers and anyone blocked by (or
+ * blocking) the viewer are not listed.
  */
-export async function listSellersForTag(params: { tagId: string; minRating?: number }) {
+export async function listSellersForTag(params: { tagId: string; minRating?: number; viewerId?: string | null }) {
+  const hidden = params.viewerId ? await blockedUserIds(params.viewerId) : [];
   const sellers = await db.sellerProfile.findMany({
     where: {
-      user: { sellerTags: { some: { tagId: params.tagId } } },
+      user: { sellerTags: { some: { tagId: params.tagId } }, status: "ACTIVE" },
+      ...(hidden.length > 0 ? { userId: { notIn: hidden } } : {}),
       ...(params.minRating ? { ratingAvg: { gte: params.minRating } } : {}),
     },
     select: {
@@ -132,6 +136,7 @@ export async function getSellerByHandle(handle: string) {
       handle: true,
       displayName: true,
       bio: true,
+      status: true,
       createdAt: true,
       sellerProfile: {
         select: {

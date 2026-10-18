@@ -4,6 +4,8 @@ import { getViewer } from "@/lib/auth";
 import { AppError } from "@/lib/errors";
 import { getThreadForViewer } from "@/modules/messaging/queries";
 import { markThreadRead } from "@/modules/messaging/mutations";
+import { relationshipWith } from "@/modules/trust/queries";
+import { SafetyMenu } from "@/components/safety-menu";
 import { Avatar, ButtonLink, Card } from "@/components/ui";
 import { MessageComposer } from "./message-composer";
 
@@ -21,7 +23,10 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
   }
 
   // Opening the conversation is reading it.
-  await markThreadRead({ threadId: id, userId: viewer.id });
+  const [relationship] = await Promise.all([
+    relationshipWith(viewer.id, thread.counterparty.id),
+    markThreadRead({ threadId: id, userId: viewer.id }),
+  ]);
 
   return (
     <main className="flex min-h-[70dvh] flex-col">
@@ -32,6 +37,12 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
             {thread.counterparty.displayName}
           </Link>
           <p className="truncate text-xs text-ink-soft">{thread.title}</p>
+          <SafetyMenu
+            handle={thread.counterparty.handle}
+            blockedByMe={relationship.blockedByMe}
+            jobId={thread.jobId}
+            canReport
+          />
         </div>
         {thread.jobId ? (
           <ButtonLink href={`/jobs/${thread.jobId}`} size="sm" variant="secondary">
@@ -74,7 +85,9 @@ export default async function ThreadPage({ params }: { params: Promise<{ id: str
       </ol>
 
       <div className="sticky bottom-16 mt-4 sm:bottom-0">
-        {thread.isClosed ? (
+        {thread.isBlocked ? (
+          <Card className="text-center text-sm text-ink-soft">You cannot message this person.</Card>
+        ) : thread.isClosed ? (
           <Card className="text-center text-sm text-ink-soft">
             This conversation is closed — the buyer went with someone else.
           </Card>

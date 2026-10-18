@@ -1,9 +1,18 @@
 import { db } from "@/lib/db";
 import { notFound } from "@/lib/errors";
+import { blockedUserIds, isBlocked } from "@/modules/trust/block-filter";
 
 export async function listThreadsForUser(userId: string) {
+  // Conversations with a blocked person leave the inbox. The rows stay (a job
+  // thread is history) and are reachable from the job page.
+  const hidden = await blockedUserIds(userId);
   const rows = await db.thread.findMany({
-    where: { OR: [{ buyerUserId: userId }, { sellerUserId: userId }] },
+    where: {
+      OR: [
+        { buyerUserId: userId, ...(hidden.length > 0 ? { sellerUserId: { notIn: hidden } } : {}) },
+        { sellerUserId: userId, ...(hidden.length > 0 ? { buyerUserId: { notIn: hidden } } : {}) },
+      ],
+    },
     select: {
       id: true,
       kind: true,
@@ -71,6 +80,8 @@ export async function getThreadForViewer(threadId: string, viewerId: string) {
   const isSeller = row.sellerUserId === viewerId;
   if (!isBuyer && !isSeller) throw notFound("That conversation");
 
+  const blocked = await isBlocked(row.buyerUserId, row.sellerUserId);
+
   return {
     id: row.id,
     role: isBuyer ? ("BUYER" as const) : ("SELLER" as const),
@@ -80,6 +91,8 @@ export async function getThreadForViewer(threadId: string, viewerId: string) {
     jobId: row.jobId,
     /** Losing responders can read the thread but not post into it. */
     isClosed: row.requestResponse?.status === "SUPERSEDED" || row.request?.status === "DECLINED",
+    /** Readable history, no composer. Same flag whichever way the block runs. */
+    isBlocked: blocked,
     messages: row.messages.map((m) => ({
       id: m.id,
       body: m.body,

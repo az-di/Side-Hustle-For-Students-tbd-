@@ -33,6 +33,9 @@ export const conflict = (message = "That already changed — reload and try agai
 
 export function toUserMessage(err: unknown, fallback = "Something went wrong. Try again."): string {
   if (err instanceof AppError) return err.message;
+  // AuthError lives in lib/auth, which imports the database; a duck-type check
+  // keeps this file dependency-free.
+  if (err instanceof Error && err.name === "AuthError") return err.message;
   console.error(err);
   return fallback;
 }

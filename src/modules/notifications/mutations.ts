@@ -2,6 +2,7 @@ import { Prisma } from "@/generated/prisma/client";
 import type { NotificationKind } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { Tx } from "@/lib/tx";
+import { notBlockedSql } from "@/modules/trust/block-filter";
 
 /**
  * Notification writes.
@@ -57,8 +58,9 @@ export async function notify(tx: Tx, input: NotifyInput | NotifyInput[]): Promis
  * would be both slow and a memory cliff. The filters live in SQL for the same
  * reason.
  *
- * Excluded: paused sellers, the buyer themselves, and anyone who already has a
- * row for this request.
+ * Excluded: paused sellers, suspended sellers, the buyer themselves, anyone
+ * with a block in either direction, and anyone who already has a row for this
+ * request.
  */
 export async function fanOutOpenRequest(
   tx: Tx,
@@ -78,9 +80,12 @@ export async function fanOutOpenRequest(
       now()
     FROM "SellerTag" st
     JOIN "SellerProfile" sp ON sp."userId" = st."sellerUserId"
+    JOIN "User" u ON u."id" = st."sellerUserId"
     WHERE st."tagId" IN (${Prisma.join(params.tagIds)})
       AND sp."isAvailable"                        -- paused sellers get no new requests
+      AND u."status" = 'ACTIVE'::"UserStatus"     -- nor do suspended ones
       AND st."sellerUserId" <> ${params.buyerUserId}  -- never notify the buyer about their own request
+      AND ${notBlockedSql(params.buyerUserId, Prisma.sql`st."sellerUserId"`)}
     ON CONFLICT ("userId", "dedupeKey") DO NOTHING
   `);
 }

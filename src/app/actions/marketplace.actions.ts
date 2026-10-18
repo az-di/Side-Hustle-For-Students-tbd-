@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireViewer } from "@/lib/auth";
+import { requireAnyViewer, requireViewer } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { toUserMessage } from "@/lib/errors";
 import { parseDollarsToCents } from "@/lib/money";
@@ -261,12 +261,12 @@ export async function sendMessageAction(
 }
 
 export async function markThreadReadAction(threadId: string): Promise<void> {
-  const viewer = await requireViewer();
+  const viewer = await requireAnyViewer();
   await markThreadRead({ threadId, userId: viewer.id });
 }
 
 export async function markAllReadAction(): Promise<void> {
-  const viewer = await requireViewer();
+  const viewer = await requireAnyViewer();
   await markAllNotificationsRead(viewer.id);
   revalidatePath("/notifications");
 }

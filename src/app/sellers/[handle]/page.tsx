@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getViewer } from "@/lib/auth";
 import { formatCents } from "@/lib/money";
 import { getSellerByHandle } from "@/modules/catalog/queries";
+import { relationshipWith } from "@/modules/trust/queries";
+import { SafetyMenu } from "@/components/safety-menu";
 import {
   Avatar,
   Badge,
@@ -21,6 +23,36 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
 
   const profile = seller.sellerProfile;
   const isMe = viewer?.id === seller.id;
+  const relationship = viewer && !isMe ? await relationshipWith(viewer.id, seller.id) : null;
+
+  // A blocked pair sees a stub, not a profile — and the same stub whichever
+  // way the block runs, so a blocked person cannot tell.
+  if (relationship?.blocked) {
+    return (
+      <main>
+        <div className="mb-5 flex items-start gap-4">
+          <Avatar name={seller.displayName} size={64} />
+          <div>
+            <h1 className="text-xl font-semibold tracking-tight">{seller.displayName}</h1>
+            <p className="text-sm text-ink-soft">@{seller.handle}</p>
+          </div>
+        </div>
+        <EmptyState
+          title="This profile is not available"
+          body={relationship.blockedByMe ? "You blocked this person." : undefined}
+          action={relationship.blockedByMe ? <SafetyMenu handle={seller.handle} blockedByMe canReport={false} /> : undefined}
+        />
+      </main>
+    );
+  }
+
+  if (seller.status !== "ACTIVE" && !isMe && !viewer?.isAdmin) {
+    return (
+      <main>
+        <EmptyState title="This account is not active" body="It is not taking requests or messages right now." />
+      </main>
+    );
+  }
 
   return (
     <main>
@@ -50,10 +82,17 @@ export default async function SellerProfilePage({ params }: { params: Promise<{ 
           Edit your profile
         </ButtonLink>
       ) : profile ? (
-        <div className="mb-5 flex flex-wrap gap-2">
+        <div className="mb-5 flex flex-wrap items-center gap-2">
           <ButtonLink href={`/requests/new?seller=${seller.handle}`} size="sm">
             {profile.isAvailable ? "Request from them" : "Paused — not taking requests"}
           </ButtonLink>
+          {relationship ? (
+            <SafetyMenu handle={seller.handle} blockedByMe={false} canReport={relationship.canReport} />
+          ) : null}
+        </div>
+      ) : relationship ? (
+        <div className="mb-5">
+          <SafetyMenu handle={seller.handle} blockedByMe={false} canReport={relationship.canReport} />
         </div>
       ) : null}
 

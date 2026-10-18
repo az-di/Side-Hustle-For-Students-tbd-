@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getViewer } from "@/lib/auth";
 import { getTagBySlug, listSellersForTag, listServiceTags } from "@/modules/catalog/queries";
 import { formatCents } from "@/lib/money";
 import { TagSearchBox } from "@/components/tag-search-box";
@@ -12,11 +13,15 @@ export default async function SearchPage({
   searchParams: Promise<{ tag?: string; minRating?: string }>;
 }) {
   const { tag: tagSlug, minRating } = await searchParams;
-  const tag = tagSlug ? await getTagBySlug(tagSlug) : null;
+  const [tag, viewer] = await Promise.all([tagSlug ? getTagBySlug(tagSlug) : null, getViewer()]);
   const minRatingNum = minRating ? Number(minRating) : undefined;
 
   const sellers = tag
-    ? await listSellersForTag({ tagId: tag.id, minRating: Number.isFinite(minRatingNum) ? minRatingNum : undefined })
+    ? await listSellersForTag({
+        tagId: tag.id,
+        minRating: Number.isFinite(minRatingNum) ? minRatingNum : undefined,
+        viewerId: viewer?.id ?? null,
+      })
     : [];
   const serviceTags = tag ? [] : await listServiceTags();
 
